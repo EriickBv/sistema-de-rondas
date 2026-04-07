@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Imprimir Códigos QR</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
+</head>
+<body>
+
+    <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR AHORA</button>
+
+    <div class="qr-grid">
+        {% for item in qrs %}
+        <div class="qr-card">
+            <h2 class="qr-card__name">{{ item.nombre }}</h2>
+            <img class="qr-card__image" src="data:image/png;base64,{{ item.img }}" alt="QR {{ item.nombre }}">
+            <p class="qr-card__token">ID: {{ item.token }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ronda Segura</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/guardia.css') }}">
+</head>
+<body>
+
+    <!-- ==================== LOGIN ==================== -->
+    <div id="screen-login" class="screen active">
+        <h2 class="login-screen__title">🛡️ Identificación</h2>
+        <p class="login-screen__subtitle">Sistema Seguro de Rondas</p>
+
+        <input type="text"     id="rut-login"  class="input" placeholder="RUT" oninput="formatearRut(this)" maxlength="12">
+        <input type="password" id="pass-login" class="input" placeholder="Contraseña">
+
+        <button class="btn btn--blue" onclick="hacerLogin()">INGRESAR</button>
+        <p id="error-login" class="error-msg"></p>
+    </div>
+
+    <!-- ==================== APP ==================== -->
+    <div id="screen-app" class="screen">
+
+        <header class="app-header">
+            <p class="app-header__guard">
+                Guardia: <span id="nombre-guardia" class="guard-name"></span>
+            </p>
+            <div id="objetivo" class="next-target">📍 Tu siguiente punto es...</div>
+        </header>
+
+        <button id="btn-scan" class="btn btn--scan" onclick="iniciarScanner()">📷 ESCANEAR PUNTO</button>
+        <button id="btn-skip" class="btn btn--orange" onclick="mostrarModalSaltar()">⏭️ Saltar este punto</button>
+
+        <div id="reader"></div>
+
+        <div id="status" class="log-box">Listo para iniciar ronda.</div>
+
+        <button class="btn btn--logout" onclick="cerrarSesion()">Cerrar Sesión</button>
+    </div>
+
+    <!-- ==================== MODAL: OBSERVACIÓN ==================== -->
+    <div id="modal-observacion" class="modal-overlay">
+        <div class="modal-content">
+            <h3>📝 Reportar Punto</h3>
+            <p>QR Detectado. ¿Alguna novedad?</p>
+            <textarea id="txt-observacion" class="input" placeholder="Ej: Ventana rota, luz quemada (Opcional)"></textarea>
+            <button class="btn btn--green"  onclick="confirmarEnvio()">✅ Confirmar y Enviar</button>
+            <button class="btn btn--cancel" onclick="cancelarEnvio()">❌ Cancelar</button>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: SALTAR PUNTO ==================== -->
+    <div id="modal-saltar" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="modal-title--warn">⚠️ Saltar Punto</h3>
+            <p>Describe por qué no puedes pasar por este punto:</p>
+            <textarea id="txt-motivo-salto" class="input" placeholder="Ej: Puerta cerrada con llave, obstrucción, QR dañado..."></textarea>
+            <button class="btn btn--blue"   onclick="confirmarSalto()">Confirmar Salto</button>
+            <button class="btn btn--cancel" onclick="cerrarModalSaltar()">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "/api";
+        let scanner    = null;
+        let QR_TEMPORAL = null;
+
+        // Verificar sesión al cargar
+        if (localStorage.getItem('token_guardia')) {
+            verificarEstadoCuenta();
+        }
+
+        async function verificarEstadoCuenta() {
+            try {
+                const res = await authFetch(API_URL + '/auth/validar_token');
+                if (res && res.ok) {
+                    configurarInterfaz(localStorage.getItem('nombre_guardia'));
+                }
+            } catch (e) { cerrarSesion(); }
+        }
+
+        function configurarInterfaz(nombre) {
+            document.getElementById('nombre-guardia').innerText = nombre;
+            mostrarPantalla('screen-app');
+        }
+
+        function mostrarPantalla(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // --- UTILS ---
+        function formatearRut(input) {
+            let actual = input.value.replace(/^0+/, "");
+            if (actual !== '' && actual.length > 1) {
+                let sinPuntos = actual.replace(/\./g, "").replace(/\-/g, "");
+                let cuerpo    = sinPuntos.substring(0, sinPuntos.length - 1);
+                let dv        = sinPuntos.substring(sinPuntos.length - 1);
+                input.value   = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + dv;
+            }
+        }
+
+        // --- LOGIN ---
+        async function hacerLogin() {
+            const rut       = document.getElementById('rut-login').value;
+            const password  = document.getElementById('pass-login').value;
+            const errorTxt  = document.getElementById('error-login');
+
+            if (!rut || !password) {
+                errorTxt.innerText    = "Completa RUT y Contraseña";
+                errorTxt.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res  = await fetch(API_URL + '/auth/login_guardia', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rut, password })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('token_guardia', data.token);
+                    localStorage.setItem('nombre_guardia', data.nombre);
+                    configurarInterfaz(data.nombre);
+                    document.getElementById('rut-login').value  = '';
+                    document.getElementById('pass-login').value = '';
+                    errorTxt.style.display = 'none';
+                } else {
+                    errorTxt.innerText     = data.message;
+                    errorTxt.style.display = 'block';
+                }
+            } catch (e) {
+                errorTxt.innerText     = "Error de conexión con el servidor";
+                errorTxt.style.display = 'block';
+            }
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('token_guardia');
+            localStorage.removeItem('nombre_guardia');
+            mostrarPantalla('screen-login');
+            if (scanner) {
+                scanner.clear();
+                document.getElementById('reader').style.display = 'none';
+            }
+        }
+
+        async function authFetch(url, options = {}) {
+            const token = localStorage.getItem('token_guardia');
+            if (!options.headers) options.headers = {};
+            options.headers['Authorization'] = token;
+            const res = await fetch(url, options);
+            if (res.status === 401) {
+                alert("Tu sesión ha expirado.");
+                cerrarSesion();
+                return null;
+            }
+            return res;
+        }
+
+        // --- ESCÁNER ---
+        function iniciarScanner() {
+            document.getElementById('btn-scan').style.display = 'none';
+            document.getElementById('btn-skip').style.display = 'none';
+            document.getElementById('reader').style.display   = 'block';
+
+            if (!scanner) {
+                scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+            }
+            scanner.render(onScan, onError);
+        }
+
+        function onScan(qrCode) {
+            scanner.clear();
+            document.getElementById('reader').style.display   = 'none';
+            document.getElementById('btn-scan').style.display = 'inline-block';
+            document.getElementById('btn-skip').style.display = 'inline-block';
+
+            QR_TEMPORAL = qrCode;
+            document.getElementById('txt-observacion').value = "";
+            document.getElementById('modal-observacion').style.display = 'flex';
+        }
+
+        function onError(err) {} // Silencioso: el escáner emite errores continuamente hasta leer
+
+        // --- MODAL OBSERVACIÓN ---
+        function cancelarEnvio() {
+            document.getElementById('modal-observacion').style.display = 'none';
+            QR_TEMPORAL = null;
+        }
+
+        function confirmarEnvio() {
+            const obs = document.getElementById('txt-observacion').value;
+            document.getElementById('modal-observacion').style.display = 'none';
+            document.getElementById('status').innerHTML = "⏳ Validando ubicación GPS...";
+
+            if (!navigator.geolocation) {
+                alert("Tu navegador no soporta GPS");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                pos => { enviarAlServidor(QR_TEMPORAL, pos.coords.latitude, pos.coords.longitude, obs); },
+                ()  => {
+                    alert("❌ Error: Debes permitir el acceso al GPS para validar la ronda.");
+                    document.getElementById('status').innerHTML = "Error: GPS no permitido";
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        async function enviarAlServidor(tokenQr, lat, long, obs) {
+            try {
+                const res = await authFetch(API_URL + '/rondas/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token_qr: tokenQr, lat, long, observacion: obs })
+                });
+                if (!res) return;
+                const data = await res.json();
+                procesarRespuestaRonda(res.ok, data);
+            } catch (e) {
+                document.getElementById('status').innerText = "Error de conexión al enviar datos.";
+            }
+        }
+
+        // --- MODAL SALTAR PUNTO ---
+        function mostrarModalSaltar() {
+            document.getElementById('modal-saltar').style.display = 'flex';
+            document.getElementById('txt-motivo-salto').value     = '';
+            document.getElementById('txt-motivo-salto').focus();
+        }
+
+        function cerrarModalSaltar() {
+            document.getElementById('modal-saltar').style.display = 'none';
+        }
+
+        async function confirmarSalto() {
+            const motivo = document.getElementById('txt-motivo-salto').value;
+            if (!motivo.trim()) { alert("Por favor escribe el motivo del salto."); return; }
+
+            const btn           = event.target;
+            const textoOriginal = btn.innerText;
+            btn.innerText       = "Enviando...";
+            btn.disabled        = true;
+
+            try {
+                const res  = await authFetch(API_URL + '/rondas/saltar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ motivo })
+                });
+                const data = await res.json();
+                cerrarModalSaltar();
+                procesarRespuestaRonda(res.ok, data);
+            } catch (error) {
+                console.error(error);
+                alert("Error de conexión");
+            } finally {
+                btn.innerText = textoOriginal;
+                btn.disabled  = false;
+            }
+        }
+
+        // --- PROCESAR RESPUESTA ---
+        function procesarRespuestaRonda(exito, data) {
+            const statusDiv  = document.getElementById('status');
+            const objetivoDiv = document.getElementById('objetivo');
+
+            if (exito) {
+                if (data.status === 'warning') {
+                    statusDiv.innerHTML = `<span class="msg-warning">⚠️ <b>REGISTRADO CON ALERTA</b></span><br>${data.message}`;
+                } else {
+                    statusDiv.innerHTML = `<span class="msg-success">✅ <b>REGISTRO EXITOSO</b></span><br>${data.message}`;
+                }
+
+                if (data.proximo_punto) {
+                    objetivoDiv.innerText = "📍 Siguiente Destino: " + data.proximo_punto;
+                    objetivoDiv.style.transform = "scale(1.05)";
+                    setTimeout(() => objetivoDiv.style.transform = "scale(1)", 300);
+                }
+            } else {
+                statusDiv.innerHTML = `<span class="msg-error">❌ <b>ERROR</b></span><br>${data.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

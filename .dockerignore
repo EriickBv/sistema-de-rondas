@@ -1,0 +1,23 @@
+# Directorios de Git
+.git
+.gitignore
+
+# Entornos virtuales de Python
+venv
+env
+.env 
+
+# Archivos compilados y cache de Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de sistema y logs
+.DS_Store
+Thumbs.db
+*.log
+
+# Carpetas de IDEs
+.vscode
+.idea

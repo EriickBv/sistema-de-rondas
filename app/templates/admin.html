@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Control de Rondas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+    <!-- ==================== LOGIN ==================== -->
+    <div id="login-view" class="login-card">
+        <h2 class="login-card__title">🔒 Acceso Admin</h2>
+        <p class="login-card__subtitle">Control de Rondas de Seguridad</p>
+        <input type="text"     id="user" class="input" placeholder="Usuario">
+        <input type="password" id="pass" class="input" placeholder="Contraseña">
+        <button class="btn btn--dark form-row" onclick="login()">Entrar al Sistema</button>
+        <p id="error" class="error-msg"></p>
+    </div>
+
+    <!-- ==================== DASHBOARD ==================== -->
+    <div id="dashboard-view" class="dashboard">
+
+        <header class="dashboard__header">
+            <h2 class="dashboard__title">🛡️ Centro de Comando</h2>
+            <button class="btn btn--danger btn--sm" onclick="logout()">Cerrar Sesión</button>
+        </header>
+
+        <div class="dashboard__body">
+
+            <!-- GUARDIA FORM -->
+            <h3 class="section-title">📝 Registrar Nuevo Guardia</h3>
+            <div class="grid-2">
+                <div class="input-stack">
+                    <input type="text"  id="g-nombre" class="input" placeholder="Nombre Completo">
+                    <input type="email" id="g-email"  class="input" placeholder="Correo Electrónico">
+                </div>
+                <div class="input-stack">
+                    <input type="text"     id="g-rut"  class="input" placeholder="RUT (ej: 12.345.678-9)" oninput="formatearRut(this)" maxlength="12">
+                    <input type="password" id="g-pass" class="input" placeholder="Contraseña">
+                </div>
+            </div>
+            <button class="btn btn--primary form-row" onclick="crearGuardia()">+ Guardar Guardia</button>
+
+            <!-- ZONA FORM -->
+            <h3 class="section-title">📍 Registrar Nueva Zona</h3>
+            <div class="grid-4">
+                <input type="text"   id="z-nombre" class="input" placeholder="Nombre (Ej: Bodega Central)">
+                <input type="number" id="z-lat"    class="input" placeholder="Latitud"   step="any" value="0.0">
+                <input type="number" id="z-long"   class="input" placeholder="Longitud"  step="any" value="0.0">
+                <button class="btn btn--success" onclick="crearZona()">➕ Agregar</button>
+            </div>
+            <p class="hint">* El sistema generará el QR automáticamente. Deja 0.0 si no conoces las coordenadas.</p>
+            <p class="hint">* Puedes numerar el nombre (Ej: "1. Entrada") para ordenarlos visualmente.</p>
+            <button class="btn btn--info form-row" onclick="obtenerCoordenadasActuales()">🛰️ Capturar mi ubicación actual</button>
+            <p id="gps-status" class="hint" style="color: var(--color-info); font-weight: 600;"></p>            
+
+            <!-- PANEL DE CONTROL -->
+            <h3 class="section-title">📊 Panel de Control</h3>
+            <div class="grid-actions">
+                <button class="btn btn--success" onclick="verReporte('hoy')">📅 Rondas de HOY</button>
+                <button class="btn btn--info"    onclick="verReporte('guardias')">👮‍♂️ Ver Guardias</button>
+                <button class="btn btn--warning" onclick="verReporte('puntos')">📍 Ver Zonas</button>
+                <button class="btn btn--purple"  onclick="descargarExcel()">📥 Bajar Excel</button>
+                <button class="btn btn--orange"  onclick="abrirImpresionQRs()">🖨️ Imprimir QRs</button>
+            </div>
+
+            <!-- TABLA DE RESULTADOS -->
+            <div id="tabla-div" class="table-wrapper">
+                <p class="empty-state">👆 Selecciona una opción arriba para cargar datos.</p>
+            </div>
+
+        </div><!-- /dashboard__body -->
+    </div><!-- /dashboard -->
+
+    <script>
+        const API = "/api";
+
+        // Verificar sesión al cargar
+        if (localStorage.getItem('token_admin')) {
+            mostrarDashboard();
+        }
+
+        // --- VALIDAR RUT ---
+        function formatearRut(input) {
+            let actual = input.value.replace(/^0+/, "");
+            if (actual !== '' && actual.length > 1) {
+                let sinPuntos = actual.replace(/\./g, "").replace(/\-/g, "");
+                let cuerpo = sinPuntos.substring(0, sinPuntos.length - 1);
+                let dv = sinPuntos.substring(sinPuntos.length - 1);
+                input.value = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + dv;
+            }
+        }
+
+        // --- FETCH SEGURO ---
+        async function authFetch(url, options = {}) {
+            const token = localStorage.getItem('token_admin');
+            if (!options.headers) options.headers = {};
+            options.headers['Authorization'] = token;
+            const res = await fetch(url, options);
+            if (res.status === 401 || res.status === 403) {
+                alert("Sesión expirada o sin permisos.");
+                localStorage.removeItem('token_admin');
+                location.reload();
+            }
+            return res;
+        }
+
+        // --- CREAR GUARDIA ---
+        async function crearGuardia() {
+            const nombre   = document.getElementById('g-nombre').value;
+            const rut      = document.getElementById('g-rut').value;
+            const email    = document.getElementById('g-email').value;
+            const password = document.getElementById('g-pass').value;
+
+            if (!nombre || !rut || !password) { alert("⚠️ Faltan datos obligatorios."); return; }
+
+            try {
+                const res = await authFetch(API + '/auth/crear_guardia', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, rut, email, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert("✅ " + data.message);
+                    ['g-nombre', 'g-rut', 'g-email', 'g-pass'].forEach(id => document.getElementById(id).value = '');
+                    verReporte('guardias');
+                } else {
+                    alert("⚠️ " + data.message);
+                }
+            } catch (e) { alert("Error de conexión"); }
+        }
+
+        // --- CREAR ZONA ---
+        async function crearZona() {
+            const nombre = document.getElementById('z-nombre').value;
+            const lat    = document.getElementById('z-lat').value;
+            const long   = document.getElementById('z-long').value;
+
+            if (!nombre) { alert("⚠️ El nombre es obligatorio."); return; }
+
+            try {
+                const res = await authFetch(API + '/zonas/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre_zona: nombre, latitud: lat, longitud: long })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert("✅ " + data.message);
+                    document.getElementById('z-nombre').value = '';
+                    verReporte('puntos');
+                } else {
+                    alert("❌ " + data.message);
+                }
+            } catch (e) { alert("Error conexión"); }
+        }
+
+        // --- CAMBIAR ESTADO GUARDIA ---
+        async function cambiarEstadoGuardia(id) {
+            try {
+                const res  = await authFetch(API + `/auth/cambiar_estado_guardia/${id}`, { method: 'PUT' });
+                const data = await res.json();
+                if (res.ok) { alert("✅ " + data.message); verReporte('guardias'); }
+                else          alert("❌ " + data.message);
+            } catch (e) { alert("Error conexión"); }
+        }
+
+        // --- ELIMINAR ZONA ---
+        async function eliminarZona(id) {
+            if (!confirm("¿Estás seguro de ELIMINAR esta zona?")) return;
+            try {
+                const res  = await authFetch(API + `/zonas/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (res.ok) { alert("🗑️ " + data.message); verReporte('puntos'); }
+                else          alert("❌ " + data.message);
+            } catch (e) { alert("Error conexión"); }
+        }
+
+        // --- GENERADOR DE TABLA ---
+        // Usa clases CSS en lugar de style="" inline
+        async function verReporte(tipo) {
+            const div = document.getElementById('tabla-div');
+            div.innerHTML = '<p class="empty-state">⏳ Cargando datos...</p>';
+
+            try {
+                const res  = await authFetch(API + `/reportes?tipo=${tipo}`);
+                const data = await res.json();
+
+                if (!data || data.length === 0) {
+                    div.innerHTML = '<p class="empty-state">⚠️ No hay datos registrados aún.</p>';
+                    return;
+                }
+
+                let html = '<table><thead><tr>';
+                Object.keys(data[0]).forEach(k => html += `<th>${k}</th>`);
+                if (tipo === 'guardias' || tipo === 'puntos') html += '<th class="col-action">Acción</th>';
+                html += '</tr></thead><tbody>';
+
+                data.forEach((row, index) => {
+                    html += '<tr>';
+                    Object.entries(row).forEach(([key, val]) => {
+                        if (key === 'Distancia') {
+                            html += `<td><span class="badge-distancia">${val}</span></td>`;
+                        }
+                        else if (key === 'Hora' && tipo === 'hoy') {
+                            const fechaUtc = new Date(val); 
+                            const horaLocal = fechaUtc.toLocaleTimeString('es-CL', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
+                            });
+                            html += `<td><strong class="text-primary">${horaLocal}</strong></td>`;                        
+                        }
+                        // COLUMNA ESTADO (Rondas)
+                        else if (key === 'Estado') {
+                            let cls = '';
+                            if      (val.includes('✅') || val.includes('🏁')) cls = 'status-ok';
+                            else if (val.includes('⏰'))  cls = 'status-late';
+                            else if (val.includes('⚠️'))  cls = 'status-far';
+                            else if (val.includes('🚨'))  cls = 'status-critical';
+                            html += `<td><span class="${cls}">${val}</span></td>`;
+
+                        // COLUMNA OBSERVACIÓN (Rondas)
+                        } else if (key === 'Observacion') {
+                            let rawText    = val || '-';
+                            let htmlContent = rawText;
+                            if (rawText.includes('[ALERTA:')) {
+                                let partes        = rawText.split('[ALERTA:');
+                                let notaGuardia   = partes[0].trim();
+                                let alertaSistema = partes[1].replace(']', '').trim();
+                                htmlContent = `<div>${notaGuardia ? `<i>"${notaGuardia}"</i><br>` : ''}<span class="obs-alerta">⚠️ ${alertaSistema}</span></div>`;
+                            } else if (rawText.includes('⚠️')) {
+                                htmlContent = `<span class="obs-warn">${rawText}</span>`;
+                            }
+                            html += `<td class="col-obs">${htmlContent}</td>`;
+
+                        // COLUMNA ACTIVO (Guardias)
+                        } else if (key === 'Activo') {
+                            let cls  = val ? 'status-active' : 'status-inactive';
+                            let text = val ? 'ACTIVO' : 'INACTIVO';
+                            html += `<td><span class="${cls}">${text}</span></td>`;
+
+                        // COLUMNA ID
+                        } else if (key === 'ID' || key === 'id_punto') {
+                            html += `<td><strong>#${index + 1}</strong></td>`;
+
+                        } else {
+                            html += `<td>${val}</td>`;
+                        }
+                    });
+
+                    // BOTONES DE ACCIÓN
+                    if (tipo === 'guardias') {
+                        let cls   = row.Activo ? 'btn--danger' : 'btn--success';
+                        let texto = row.Activo ? '🚫 Desactivar' : '✅ Activar';
+                        html += `<td class="col-action"><button class="btn btn--sm ${cls}" onclick="cambiarEstadoGuardia(${row.ID})">${texto}</button></td>`;
+                    } else if (tipo === 'puntos') {
+                        let idZona = row.ID || row.id_punto;
+                        html += `<td class="col-action"><button class="btn btn--sm btn--danger" onclick="eliminarZona(${idZona})">🗑️ Borrar</button></td>`;
+                    }
+
+                    html += '</tr>';
+                });
+
+                div.innerHTML = html + '</tbody></table>';
+
+            } catch (e) {
+                console.error(e);
+                div.innerHTML = '<p class="empty-state empty-state--error">❌ Error al cargar datos.</p>';
+            }
+        }
+
+        // --- LOGIN ---
+        async function login() {
+            const u   = document.getElementById('user').value;
+            const p   = document.getElementById('pass').value;
+            const err = document.getElementById('error');
+            try {
+                const res  = await fetch(API + '/auth/login_admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario: u, password: p })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('token_admin', data.token);
+                    mostrarDashboard();
+                    err.style.display = 'none';
+                } else {
+                    err.innerText      = "❌ " + data.message;
+                    err.style.display  = 'block';
+                }
+            } catch (e) {
+                err.innerText     = "Error de conexión";
+                err.style.display = 'block';
+            }
+        }
+
+        function mostrarDashboard() {
+            document.getElementById('login-view').style.display     = 'none';
+            document.getElementById('dashboard-view').style.display = 'block';
+        }
+
+        function logout() {
+            if (confirm("¿Cerrar sesión?")) {
+                localStorage.removeItem('token_admin');
+                location.reload();
+            }
+        }
+
+        // --- DESCARGAR EXCEL ---
+        async function descargarExcel() {
+            if (!confirm("¿Descargar reporte?")) return;
+            const btn = event.target;
+            btn.innerText = "⏳ ...";
+            try {
+                const res = await authFetch(API + '/reportes/exportar');
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url  = window.URL.createObjectURL(blob);
+                    const a    = document.createElement('a');
+                    a.href     = url;
+                    a.download = "Reporte_" + new Date().toISOString().slice(0, 10) + ".csv";
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } else {
+                    alert("Error en descarga");
+                }
+            } catch (e) { alert("Error de conexión"); }
+            finally { btn.innerText = "📥 Bajar Excel"; }
+        }
+
+        // --- IMPRIMIR QRs ---
+        async function abrirImpresionQRs() {
+            try {
+                const res = await authFetch(API + '/reportes/imprimir_qrs');
+                if (res.ok) {
+                    const html = await res.text();
+                    const v = window.open("", "_blank");
+                    v.document.write(html);
+                    v.document.close();
+                } else {
+                    alert("Error al generar QRs");
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function obtenerCoordenadasActuales() {
+            const status = document.getElementById('gps-status');
+            const inputLat = document.getElementById('z-lat');
+            const inputLong = document.getElementById('z-long');
+
+            if (!navigator.geolocation) {
+                status.innerText = "❌ Tu navegador no soporta geolocalización.";
+                return;
+            }
+
+            status.innerText = "⏳ Localizando...";
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude.toFixed(7);
+                    const lon = pos.coords.longitude.toFixed(7);
+                    
+                    inputLat.value = lat;
+                    inputLong.value = lon;
+                    
+                    status.innerText = `✅ Ubicación capturada con éxito (Precisión: +/- ${pos.coords.accuracy.toFixed(1)}m)`;
+                    status.style.color = "var(--color-success)";
+                },
+                (err) => {
+                    console.error(err);
+                    status.innerText = "❌ Error: Permiso de GPS denegado o señal débil.";
+                    status.style.color = "var(--color-danger)";
+                },
+                {
+                    enableHighAccuracy: true, 
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }        
+    </script>
+</body>
+</html>

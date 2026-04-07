@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@600;700&family=IBM+Plex+Mono:wght@500&display=swap');
+
+/* ============================================================
+   CSS VARIABLES
+   ============================================================ */
+:root {
+  --font-base: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+
+  --bg:           #f0f0f0;
+  --card-bg:      #ffffff;
+  --card-border:  #000000;
+  --text-title:   #111111;
+  --text-token:   #555555;
+
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+
+  --radius: 10px;
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-base);
+  background: var(--bg);
+  padding: var(--sp-5);
+}
+
+/* ============================================================
+   BOTÓN IMPRIMIR
+   ============================================================ */
+.btn-print {
+  display: block;
+  width: 220px;
+  margin: 0 auto var(--sp-5);
+  padding: var(--sp-4);
+  background: #1a3560;
+  color: #ffffff;
+  font-family: var(--font-base);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  letter-spacing: 0.01em;
+}
+
+.btn-print:hover { background: #2a5298; }
+
+/* ============================================================
+   GRID DE TARJETAS
+   ============================================================ */
+.qr-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-5);
+  justify-content: center;
+}
+
+/* ============================================================
+   TARJETA QR
+   ============================================================ */
+.qr-card {
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius);
+  width: 220px;
+  padding: var(--sp-4);
+  text-align: center;
+  page-break-inside: avoid;
+}
+
+.qr-card__name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-title);
+  margin-bottom: var(--sp-3);
+  line-height: 1.3;
+}
+
+.qr-card__image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.qr-card__token {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-token);
+  margin-top: var(--sp-3);
+  word-break: break-all;
+}
+
+/* ============================================================
+   PRINT MEDIA
+   ============================================================ */
+@media print {
+  body {
+    background: white;
+    padding: 0;
+  }
+
+  .btn-print {
+    display: none;
+  }
+
+  .qr-grid {
+    gap: 10px;
+  }
+
+  .qr-card {
+    border: 1px dashed #999;
+    border-radius: 6px;
+    width: 200px;
+    padding: var(--sp-3);
+  }
+}

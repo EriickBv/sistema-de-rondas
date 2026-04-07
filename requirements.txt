@@ -1,0 +1,12 @@
+Flask
+pytz
+flask-cors
+Flask-SQLAlchemy 
+Flask-Migrate        
+PyJWT               
+pytest  
+python-dotenv         
+mysql-connector-python
+qrcode[pil]
+gunicorn
+cryptography

@@ -1,0 +1,315 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+/* ============================================================
+   CSS VARIABLES
+   ============================================================ */
+:root {
+  --font-base: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+
+  /* Dark theme palette */
+  --bg:          #0f172a;
+  --surface:     #1e293b;
+  --surface-2:   #273548;
+  --border:      #334155;
+  --text:        #f1f5f9;
+  --text-muted:  #94a3b8;
+
+  /* Colores de acción */
+  --color-scan:    #fbbf24;
+  --color-scan-bg: rgba(251, 191, 36, 0.12);
+  --color-blue:    #3b82f6;
+  --color-green:   #34d399;
+  --color-orange:  #fb923c;
+  --color-danger:  #f87171;
+  --color-gray:    #64748b;
+
+  /* Spacing */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+
+  /* Radios */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-pill: 50px;
+
+  /* Sombras */
+  --shadow-scan: 0 0 20px rgba(251, 191, 36, 0.30);
+  --shadow-modal: 0 20px 60px rgba(0,0,0,.60);
+
+  --transition: 150ms ease;
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-base);
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  padding: var(--sp-5);
+  text-align: center;
+}
+
+/* ============================================================
+   PANTALLAS (screens)
+   ============================================================ */
+.screen {
+  max-width: 400px;
+  margin: 0 auto;
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+/* ============================================================
+   LOGIN SCREEN
+   ============================================================ */
+.login-screen__title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: var(--sp-2);
+  letter-spacing: -0.01em;
+}
+
+.login-screen__subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: var(--sp-6);
+}
+
+/* ============================================================
+   APP SCREEN - HEADER
+   ============================================================ */
+.app-header {
+  margin-bottom: var(--sp-6);
+  padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.app-header__guard {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: var(--sp-1);
+}
+
+.guard-name {
+  color: var(--color-green);
+  font-weight: 700;
+}
+
+.next-target {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-scan);
+  margin-top: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-scan-bg);
+  border-left: 3px solid var(--color-scan);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  text-align: left;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+/* ============================================================
+   INPUTS Y TEXTAREAS
+   ============================================================ */
+.input {
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-base);
+  font-size: 16px;
+  display: block;
+  margin: var(--sp-2) 0;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.20);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+textarea.input {
+  height: 90px;
+  resize: none;
+  line-height: 1.5;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: block;
+  width: 100%;
+  padding: 15px var(--sp-5);
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-base);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: var(--sp-3);
+  transition: transform var(--transition), opacity var(--transition), box-shadow var(--transition);
+  letter-spacing: 0.01em;
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn--blue   { background: var(--color-blue);   color: #fff; }
+.btn--green  { background: var(--color-green);  color: #0f172a; }
+.btn--cancel { background: var(--surface-2);    color: var(--text-muted); margin-top: var(--sp-2); }
+.btn--orange { background: var(--color-orange); color: #fff; }
+.btn--logout {
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  padding: 10px var(--sp-5);
+  font-size: 14px;
+  margin-top: var(--sp-8);
+  border-radius: var(--radius-pill);
+}
+.btn--logout:hover {
+  background: rgba(248, 113, 113, 0.08);
+}
+
+/* Botón principal de escáner */
+.btn--scan {
+  background: var(--color-scan);
+  color: #0f172a;
+  box-shadow: var(--shadow-scan);
+  font-size: 18px;
+  padding: 18px var(--sp-5);
+}
+
+.btn--scan:hover {
+  box-shadow: 0 0 30px rgba(251, 191, 36, 0.45);
+  transform: translateY(-2px);
+}
+
+/* ============================================================
+   LECTOR QR
+   ============================================================ */
+#reader {
+  width: 100%;
+  border: 2px solid var(--border);
+  margin-top: var(--sp-5);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: none;
+}
+
+/* ============================================================
+   STATUS LOG
+   ============================================================ */
+.log-box {
+  text-align: left;
+  background: var(--surface);
+  padding: var(--sp-4);
+  margin-top: var(--sp-5);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-base);
+  font-size: 14px;
+  min-height: 56px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   MENSAJES DE ERROR
+   ============================================================ */
+.error-msg {
+  color: var(--color-danger);
+  display: none;
+  margin-top: var(--sp-3);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ============================================================
+   MODALES
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 1000;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  padding: var(--sp-5);
+}
+
+.modal-content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: var(--sp-6);
+  border-radius: var(--radius-md);
+  width: 100%;
+  max-width: 360px;
+  text-align: left;
+  box-shadow: var(--shadow-modal);
+}
+
+.modal-content h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: var(--sp-2);
+  color: var(--text);
+}
+
+.modal-content h3.modal-title--warn {
+  color: var(--color-orange);
+}
+
+.modal-content p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: var(--sp-3);
+}
+
+/* ============================================================
+   MENSAJES DE ESTADO DINÁMICO (procesarRespuestaRonda)
+   ============================================================ */
+.msg-success {
+  color: var(--color-green);
+  font-size: 1.1em;
+  font-weight: 700;
+}
+
+.msg-warning {
+  color: var(--color-orange);
+  font-size: 1.1em;
+  font-weight: 700;
+}
+
+.msg-error {
+  color: var(--color-danger);
+  font-size: 1.1em;
+  font-weight: 700;
+}

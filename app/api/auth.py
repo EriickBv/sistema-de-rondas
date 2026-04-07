@@ -29,20 +29,23 @@ def login_guardia():
     return jsonify({"message": "Credenciales inválidas"}), 401
 
 @auth_bp.route('/crear_guardia', methods=['POST'])
-@token_required  # <--- AHORA PROTEGIDO
+@token_required
 def crear_guardia():
-    if request.usuario_rol != 'admin': # <--- SOLO ADMIN
+    if request.usuario_rol != 'admin':
         return jsonify({"message": "No autorizado"}), 403
 
     data = request.get_json()
-    
+
     if Guardia.query.filter_by(rut=data['rut']).first():
         return jsonify({"message": "El RUT ya existe"}), 400
+
+    id_sede = data.get('id_sede')
 
     nuevo_guardia = Guardia(
         nombre=data['nombre'],
         rut=data['rut'],
-        email=data['email']
+        email=data.get('email'),
+        id_sede=int(id_sede) if id_sede else None
     )
     nuevo_guardia.set_password(data['password'])
 
@@ -80,6 +83,18 @@ def cambiar_estado_guardia(id):
     guardia.activo = not guardia.activo 
     db.session.commit()
     return jsonify({"message": f"Guardia {'activado' if guardia.activo else 'desactivado'}"}), 200
+
+@auth_bp.route('/cambiar_sede_guardia/<int:id>', methods=['PUT'])
+@token_required
+def cambiar_sede_guardia(id):
+    if request.usuario_rol != 'admin':
+        return jsonify({"message": "No autorizado"}), 403
+    guardia = Guardia.query.get_or_404(id)
+    data    = request.get_json() or {}
+    id_sede = data.get('id_sede')
+    guardia.id_sede = int(id_sede) if id_sede else None
+    db.session.commit()
+    return jsonify({"message": "Sede actualizada correctamente"}), 200
 
 @auth_bp.route('/validar_token', methods=['GET'])
 @token_required

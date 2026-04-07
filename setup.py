@@ -24,6 +24,10 @@ FLASK_ENV=production
 SECRET_KEY="{secret_key}"
 DATABASE_URL=mysql+mysqlconnector://admin:{db_pass}@db/sistema_rondas
 
+# ==========================================
+# RUTAS DEL SISTEMA (Modificable)
+# ==========================================
+RUTA_ADMIN=/admin
 
 # ==========================================
 #  CONFIGURACIÓN DE CORREO - ¡CAMBIAR AQUÍ!

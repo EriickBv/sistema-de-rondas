@@ -19,15 +19,16 @@ def agregar_zona():
     if request.usuario_rol != 'admin':
         return jsonify({'message': 'No autorizado'}), 403
 
-    data = request.get_json()
+    data   = request.get_json()
     nombre = data.get('nombre_zona')
-    
+
     if not nombre:
         return jsonify({'message': 'El nombre es obligatorio'}), 400
 
     try:
-        lat = float(data.get('latitud', 0.0))
-        long = float(data.get('longitud', 0.0))
+        lat      = float(data.get('latitud', 0.0))
+        long     = float(data.get('longitud', 0.0))
+        id_sede  = data.get('id_sede')                             
         token_qr = str(uuid.uuid4().hex)[:12].upper()
 
         nueva_zona = PuntoControl(
@@ -36,12 +37,13 @@ def agregar_zona():
             latitud=lat,
             longitud=long,
             radio_permitido=20,
-            numero_orden=999
+            numero_orden=999,
+            id_sede=int(id_sede) if id_sede else None              
         )
         db.session.add(nueva_zona)
         db.session.commit()
         reordenar_zonas()
-        
+
         return jsonify({'message': f'Zona "{nombre}" agregada correctamente'}), 201
     except Exception as e:
         db.session.rollback()

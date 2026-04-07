@@ -2,80 +2,116 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ronda Segura</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/guardia.css') }}">
 </head>
 <body>
 
-    <!-- ==================== LOGIN ==================== -->
     <div id="screen-login" class="screen active">
-        <h2 class="login-screen__title">🛡️ Identificación</h2>
-        <p class="login-screen__subtitle">Sistema Seguro de Rondas</p>
+        <div class="login-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <h2>Identificación</h2>
+            <p>Sistema Seguro de Rondas</p>
+        </div>
 
-        <input type="text"     id="rut-login"  class="input" placeholder="RUT" oninput="formatearRut(this)" maxlength="12">
-        <input type="password" id="pass-login" class="input" placeholder="Contraseña">
+        <div class="field">
+            <label>RUT</label>
+            <input type="text" id="rut-login" class="input" placeholder="12.345.678-9" oninput="formatearRut(this)" maxlength="12">
+        </div>
+        <div class="field">
+            <label>Contraseña</label>
+            <input type="password" id="pass-login" class="input" placeholder="••••••••">
+        </div>
 
-        <button class="btn btn--blue" onclick="hacerLogin()">INGRESAR</button>
+        <button class="btn btn-primary" onclick="hacerLogin()">Ingresar al Sistema</button>
         <p id="error-login" class="error-msg"></p>
     </div>
 
-    <!-- ==================== APP ==================== -->
     <div id="screen-app" class="screen">
-
         <header class="app-header">
-            <p class="app-header__guard">
-                Guardia: <span id="nombre-guardia" class="guard-name"></span>
-            </p>
-            <div id="objetivo" class="next-target">📍 Tu siguiente punto es...</div>
+            <div class="guard-info">
+                <span class="label">Guardia de Turno</span>
+                <span id="nombre-guardia" class="value">Cargando...</span>
+            </div>
+            <button class="btn-icon" onclick="cerrarSesion()" title="Cerrar Sesión">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
         </header>
 
-        <button id="btn-scan" class="btn btn--scan" onclick="iniciarScanner()">📷 ESCANEAR PUNTO</button>
-        <button id="btn-skip" class="btn btn--orange" onclick="mostrarModalSaltar()">⏭️ Saltar este punto</button>
+        <div class="target-card">
+            <div class="target-label">Siguiente Punto:</div>
+            <div id="objetivo" class="target-value">A la espera del primer escaneo...</div>
+        </div>
 
-        <div id="reader"></div>
+        <div id="reader-container" class="reader-container">
+            <div id="reader"></div>
+        </div>
 
-        <div id="status" class="log-box">Listo para iniciar ronda.</div>
+        <div class="action-buttons">
+            <button id="btn-scan" class="btn btn-scan" onclick="iniciarScanner()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h4v4H4zM16 4h4v4h-4zM4 16h4v4H4zM12 12h.01"/><path d="M3 3h18v18H3z"/></svg>
+                Escanear Punto
+            </button>
+            <button id="btn-skip" class="btn btn-outline" onclick="mostrarModalSaltar()">
+                Saltar este punto
+            </button>
+        </div>
 
-        <button class="btn btn--logout" onclick="cerrarSesion()">Cerrar Sesión</button>
-    </div>
-
-    <!-- ==================== MODAL: OBSERVACIÓN ==================== -->
-    <div id="modal-observacion" class="modal-overlay">
-        <div class="modal-content">
-            <h3>📝 Reportar Punto</h3>
-            <p>QR Detectado. ¿Alguna novedad?</p>
-            <textarea id="txt-observacion" class="input" placeholder="Ej: Ventana rota, luz quemada (Opcional)"></textarea>
-            <button class="btn btn--green"  onclick="confirmarEnvio()">✅ Confirmar y Enviar</button>
-            <button class="btn btn--cancel" onclick="cancelarEnvio()">❌ Cancelar</button>
+        <div id="status" class="log-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>Listo para iniciar la ronda. Presiona Escanear.</span>
         </div>
     </div>
 
-    <!-- ==================== MODAL: SALTAR PUNTO ==================== -->
+    <div id="modal-observacion" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header success-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <h3>Punto Detectado</h3>
+            </div>
+            <div class="modal-body">
+                <label>¿Hay alguna novedad? (Opcional)</label>
+                <textarea id="txt-observacion" class="input textarea" placeholder="Ej: Luz apagada, puerta forzada..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="confirmarEnvio()">Confirmar Reporte</button>
+                <button class="btn btn-ghost" onclick="cancelarEnvio()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-saltar" class="modal-overlay">
         <div class="modal-content">
-            <h3 class="modal-title--warn">⚠️ Saltar Punto</h3>
-            <p>Describe por qué no puedes pasar por este punto:</p>
-            <textarea id="txt-motivo-salto" class="input" placeholder="Ej: Puerta cerrada con llave, obstrucción, QR dañado..."></textarea>
-            <button class="btn btn--blue"   onclick="confirmarSalto()">Confirmar Salto</button>
-            <button class="btn btn--cancel" onclick="cerrarModalSaltar()">Cancelar</button>
+            <div class="modal-header warning-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <h3>Saltar Punto</h3>
+            </div>
+            <div class="modal-body">
+                <label>Describe el motivo obligatorio:</label>
+                <textarea id="txt-motivo-salto" class="input textarea" placeholder="Ej: Puerta con candado, pasillo bloqueado..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-warning" onclick="confirmarSalto(event)">Reportar Salto</button>
+                <button class="btn btn-ghost" onclick="cerrarModalSaltar()">Cancelar</button>
+            </div>
         </div>
     </div>
 
     <script>
         const API_URL = "/api";
-        let scanner    = null;
+        let scanner = null;
         let QR_TEMPORAL = null;
 
-        // Verificar sesión al cargar
-        if (localStorage.getItem('token_guardia')) {
-            verificarEstadoCuenta();
-        }
+        // Verificación inicial
+        if (localStorage.getItem('token_guardia')) verificarEstadoCuenta();
 
         async function verificarEstadoCuenta() {
             try {
-                const res = await authFetch(API_URL + '/auth/validar_token');
+                const res = await authFetch(`${API_URL}/auth/validar_token`);
                 if (res && res.ok) {
                     configurarInterfaz(localStorage.getItem('nombre_guardia'));
                 }
@@ -92,51 +128,44 @@
             document.getElementById(id).classList.add('active');
         }
 
-        // --- UTILS ---
         function formatearRut(input) {
             let actual = input.value.replace(/^0+/, "");
-            if (actual !== '' && actual.length > 1) {
-                let sinPuntos = actual.replace(/\./g, "").replace(/\-/g, "");
-                let cuerpo    = sinPuntos.substring(0, sinPuntos.length - 1);
-                let dv        = sinPuntos.substring(sinPuntos.length - 1);
-                input.value   = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + dv;
+            if (actual.length > 1) {
+                let clean = actual.replace(/\./g, "").replace(/-/g, "");
+                let body = clean.slice(0, -1);
+                let dv = clean.slice(-1);
+                input.value = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + dv;
             }
         }
 
-        // --- LOGIN ---
         async function hacerLogin() {
-            const rut       = document.getElementById('rut-login').value;
-            const password  = document.getElementById('pass-login').value;
-            const errorTxt  = document.getElementById('error-login');
-
+            const rut = document.getElementById('rut-login').value;
+            const password = document.getElementById('pass-login').value;
+            const err = document.getElementById('error-login');
             if (!rut || !password) {
-                errorTxt.innerText    = "Completa RUT y Contraseña";
-                errorTxt.style.display = 'block';
+                err.innerText = "Completa RUT y Contraseña.";
+                err.style.display = 'block';
                 return;
             }
-
             try {
-                const res  = await fetch(API_URL + '/auth/login_guardia', {
+                const res = await fetch(`${API_URL}/auth/login_guardia`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ rut, password })
                 });
                 const data = await res.json();
-
                 if (res.ok) {
                     localStorage.setItem('token_guardia', data.token);
                     localStorage.setItem('nombre_guardia', data.nombre);
                     configurarInterfaz(data.nombre);
-                    document.getElementById('rut-login').value  = '';
-                    document.getElementById('pass-login').value = '';
-                    errorTxt.style.display = 'none';
+                    err.style.display = 'none';
                 } else {
-                    errorTxt.innerText     = data.message;
-                    errorTxt.style.display = 'block';
+                    err.innerText = data.message;
+                    err.style.display = 'block';
                 }
             } catch (e) {
-                errorTxt.innerText     = "Error de conexión con el servidor";
-                errorTxt.style.display = 'block';
+                err.innerText = "Error de conexión.";
+                err.style.display = 'block';
             }
         }
 
@@ -146,8 +175,10 @@
             mostrarPantalla('screen-login');
             if (scanner) {
                 scanner.clear();
-                document.getElementById('reader').style.display = 'none';
+                document.getElementById('reader-container').style.display = 'none';
             }
+            document.getElementById('btn-scan').style.display = 'flex';
+            document.getElementById('btn-skip').style.display = 'flex';
         }
 
         async function authFetch(url, options = {}) {
@@ -156,39 +187,32 @@
             options.headers['Authorization'] = token;
             const res = await fetch(url, options);
             if (res.status === 401) {
-                alert("Tu sesión ha expirado.");
+                alert("Sesión expirada. Ingresa nuevamente.");
                 cerrarSesion();
                 return null;
             }
             return res;
         }
 
-        // --- ESCÁNER ---
         function iniciarScanner() {
             document.getElementById('btn-scan').style.display = 'none';
             document.getElementById('btn-skip').style.display = 'none';
-            document.getElementById('reader').style.display   = 'block';
+            document.getElementById('reader-container').style.display = 'block';
 
-            if (!scanner) {
-                scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
-            }
-            scanner.render(onScan, onError);
+            if (!scanner) scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+            scanner.render(onScan, () => {}); // Ignore constant errors during scanning
         }
 
         function onScan(qrCode) {
             scanner.clear();
-            document.getElementById('reader').style.display   = 'none';
-            document.getElementById('btn-scan').style.display = 'inline-block';
-            document.getElementById('btn-skip').style.display = 'inline-block';
-
+            document.getElementById('reader-container').style.display = 'none';
+            document.getElementById('btn-scan').style.display = 'flex';
+            document.getElementById('btn-skip').style.display = 'flex';
             QR_TEMPORAL = qrCode;
             document.getElementById('txt-observacion').value = "";
             document.getElementById('modal-observacion').style.display = 'flex';
         }
 
-        function onError(err) {} // Silencioso: el escáner emite errores continuamente hasta leer
-
-        // --- MODAL OBSERVACIÓN ---
         function cancelarEnvio() {
             document.getElementById('modal-observacion').style.display = 'none';
             QR_TEMPORAL = null;
@@ -197,18 +221,18 @@
         function confirmarEnvio() {
             const obs = document.getElementById('txt-observacion').value;
             document.getElementById('modal-observacion').style.display = 'none';
-            document.getElementById('status').innerHTML = "⏳ Validando ubicación GPS...";
+            document.getElementById('status').innerHTML = '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v4"/></svg> <span>Validando ubicación GPS...</span>';
 
             if (!navigator.geolocation) {
-                alert("Tu navegador no soporta GPS");
+                alert("Tu navegador no soporta GPS.");
                 return;
             }
 
             navigator.geolocation.getCurrentPosition(
-                pos => { enviarAlServidor(QR_TEMPORAL, pos.coords.latitude, pos.coords.longitude, obs); },
-                ()  => {
-                    alert("❌ Error: Debes permitir el acceso al GPS para validar la ronda.");
-                    document.getElementById('status').innerHTML = "Error: GPS no permitido";
+                pos => enviarAlServidor(QR_TEMPORAL, pos.coords.latitude, pos.coords.longitude, obs),
+                () => {
+                    alert("Debes permitir el acceso al GPS.");
+                    document.getElementById('status').innerHTML = 'Error: GPS no permitido';
                 },
                 { enableHighAccuracy: true }
             );
@@ -216,7 +240,7 @@
 
         async function enviarAlServidor(tokenQr, lat, long, obs) {
             try {
-                const res = await authFetch(API_URL + '/rondas/', {
+                const res = await authFetch(`${API_URL}/rondas/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token_qr: tokenQr, lat, long, observacion: obs })
@@ -225,14 +249,13 @@
                 const data = await res.json();
                 procesarRespuestaRonda(res.ok, data);
             } catch (e) {
-                document.getElementById('status').innerText = "Error de conexión al enviar datos.";
+                document.getElementById('status').innerHTML = "Error de conexión al enviar datos.";
             }
         }
 
-        // --- MODAL SALTAR PUNTO ---
         function mostrarModalSaltar() {
             document.getElementById('modal-saltar').style.display = 'flex';
-            document.getElementById('txt-motivo-salto').value     = '';
+            document.getElementById('txt-motivo-salto').value = '';
             document.getElementById('txt-motivo-salto').focus();
         }
 
@@ -240,17 +263,16 @@
             document.getElementById('modal-saltar').style.display = 'none';
         }
 
-        async function confirmarSalto() {
+        async function confirmarSalto(e) {
             const motivo = document.getElementById('txt-motivo-salto').value;
-            if (!motivo.trim()) { alert("Por favor escribe el motivo del salto."); return; }
+            if (!motivo.trim()) { alert("Describe el motivo."); return; }
 
-            const btn           = event.target;
-            const textoOriginal = btn.innerText;
-            btn.innerText       = "Enviando...";
-            btn.disabled        = true;
+            const btn = e.target;
+            const original = btn.innerText;
+            btn.innerText = "Enviando..."; btn.disabled = true;
 
             try {
-                const res  = await authFetch(API_URL + '/rondas/saltar', {
+                const res = await authFetch(`${API_URL}/rondas/saltar`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ motivo })
@@ -258,34 +280,29 @@
                 const data = await res.json();
                 cerrarModalSaltar();
                 procesarRespuestaRonda(res.ok, data);
-            } catch (error) {
-                console.error(error);
+            } catch (err) {
                 alert("Error de conexión");
             } finally {
-                btn.innerText = textoOriginal;
-                btn.disabled  = false;
+                btn.innerText = original; btn.disabled = false;
             }
         }
 
-        // --- PROCESAR RESPUESTA ---
         function procesarRespuestaRonda(exito, data) {
-            const statusDiv  = document.getElementById('status');
+            const statusDiv = document.getElementById('status');
             const objetivoDiv = document.getElementById('objetivo');
 
             if (exito) {
                 if (data.status === 'warning') {
-                    statusDiv.innerHTML = `<span class="msg-warning">⚠️ <b>REGISTRADO CON ALERTA</b></span><br>${data.message}`;
+                    statusDiv.className = 'log-box warning';
+                    statusDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> <span><b>Alerta:</b> ${data.message}</span>`;
                 } else {
-                    statusDiv.innerHTML = `<span class="msg-success">✅ <b>REGISTRO EXITOSO</b></span><br>${data.message}`;
+                    statusDiv.className = 'log-box success';
+                    statusDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> <span><b>Éxito:</b> ${data.message}</span>`;
                 }
-
-                if (data.proximo_punto) {
-                    objetivoDiv.innerText = "📍 Siguiente Destino: " + data.proximo_punto;
-                    objetivoDiv.style.transform = "scale(1.05)";
-                    setTimeout(() => objetivoDiv.style.transform = "scale(1)", 300);
-                }
+                if (data.proximo_punto) objetivoDiv.innerText = data.proximo_punto;
             } else {
-                statusDiv.innerHTML = `<span class="msg-error">❌ <b>ERROR</b></span><br>${data.message}`;
+                statusDiv.className = 'log-box error';
+                statusDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> <span><b>Error:</b> ${data.message}</span>`;
             }
         }
     </script>

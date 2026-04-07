@@ -29,7 +29,7 @@ Sistema web integral para la gestión, monitoreo y auditoría de rondas de segur
 ### 1. Configuración de Entorno
 Ejecute el script en su terminal para establecer claves y credenciales:
 * `python setup.py`
-* *Nota: En el .env, ingrese la contraseña de aplicación de 16 caracteres sin espacios*.
+* *Nota: En el .env, ingrese la contraseña de aplicación de 16 caracteres sin espacios  https://myaccount.google.com/apppasswords*.
 
 ### 2. Iniciar el Sistema
 Construya y levante los servicios:

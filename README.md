@@ -39,6 +39,7 @@ Construya y levante los servicios:
 ### 3. Inicializar Base de Datos
 Ejecute estos comandos en orden para crear las tablas y el administrador:
 * `docker-compose exec web flask db upgrade`
+> Nota: Si este paso le da un problema ejecute "docker-compose down -v" y lenvate nuevamente los servicios "docker-compose up -d --build".
 * `docker-compose exec web python semilla.py`
 
 > **Credenciales por defecto:**

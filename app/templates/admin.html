@@ -8,7 +8,6 @@
 </head>
 <body>
 
-    <!-- ==================== LOGIN ==================== -->
     <div id="login-view" class="login-card">
         <h2 class="login-card__title">🔒 Acceso Admin</h2>
         <p class="login-card__subtitle">Control de Rondas de Seguridad</p>
@@ -18,7 +17,6 @@
         <p id="error" class="error-msg"></p>
     </div>
 
-    <!-- ==================== DASHBOARD ==================== -->
     <div id="dashboard-view" class="dashboard">
 
         <header class="dashboard__header">
@@ -28,7 +26,6 @@
 
         <div class="dashboard__body">
 
-            <!-- GUARDIA FORM -->
             <h3 class="section-title">📝 Registrar Nuevo Guardia</h3>
             <div class="grid-2">
                 <div class="input-stack">
@@ -42,7 +39,6 @@
             </div>
             <button class="btn btn--primary form-row" onclick="crearGuardia()">+ Guardar Guardia</button>
 
-            <!-- ZONA FORM -->
             <h3 class="section-title">📍 Registrar Nueva Zona</h3>
             <div class="grid-4">
                 <input type="text"   id="z-nombre" class="input" placeholder="Nombre (Ej: Bodega Central)">
@@ -55,23 +51,59 @@
             <button class="btn btn--info form-row" onclick="obtenerCoordenadasActuales()">🛰️ Capturar mi ubicación actual</button>
             <p id="gps-status" class="hint" style="color: var(--color-info); font-weight: 600;"></p>            
 
-            <!-- PANEL DE CONTROL -->
             <h3 class="section-title">📊 Panel de Control</h3>
             <div class="grid-actions">
                 <button class="btn btn--success" onclick="verReporte('hoy')">📅 Rondas de HOY</button>
                 <button class="btn btn--info"    onclick="verReporte('guardias')">👮‍♂️ Ver Guardias</button>
                 <button class="btn btn--warning" onclick="verReporte('puntos')">📍 Ver Zonas</button>
-                <button class="btn btn--purple"  onclick="descargarExcel()">📥 Bajar Excel</button>
+                <button class="btn btn--purple"  onclick="abrirModalExport()">📥 Bajar Excel</button>
                 <button class="btn btn--orange"  onclick="abrirImpresionQRs()">🖨️ Imprimir QRs</button>
             </div>
 
-            <!-- TABLA DE RESULTADOS -->
             <div id="tabla-div" class="table-wrapper">
                 <p class="empty-state">👆 Selecciona una opción arriba para cargar datos.</p>
             </div>
 
-        </div><!-- /dashboard__body -->
-    </div><!-- /dashboard -->
+            <h3 class="section-title">📧 Reportes Automáticos por Correo</h3>
+            <p class="hint" style="margin-bottom:12px;">
+                Se envía automáticamente el reporte del día anterior cada mañana a las 07:00 hs.
+            </p>
+            <div style="display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:center;">
+                <input type="email" id="email-nuevo" class="input" placeholder="destinatario@empresa.com">
+                <button class="btn btn--primary" onclick="agregarEmail()" style="height:42px;width:auto;padding:0 16px;">+ Agregar</button>
+                <button class="btn btn--warning" onclick="enviarReporteAhora()" style="height:42px;width:auto;padding:0 16px;">📤 Enviar ahora</button>
+            </div>
+            <div id="lista-emails" class="table-wrapper" style="margin-top:12px;">
+                <p class="empty-state">⏳ Cargando destinatarios...</p>
+            </div>
+
+        </div></div><div id="modal-export" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3>📥 Descargar Reporte CSV</h3>
+
+            <button class="btn btn--primary" onclick="descargarCSV('completo')" style="margin:12px 0 8px;">
+                📋 Historial Completo
+            </button>
+
+            <hr style="border:none;border-top:1px solid var(--border-color);margin:12px 0;">
+
+            <p style="font-weight:600;margin-bottom:10px;">Por Rango de Fechas:</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                <div>
+                    <label class="hint">Desde</label>
+                    <input type="date" id="export-desde" class="input" style="margin-top:4px;">
+                </div>
+                <div>
+                    <label class="hint">Hasta</label>
+                    <input type="date" id="export-hasta" class="input" style="margin-top:4px;">
+                </div>
+            </div>
+            <button class="btn btn--success" onclick="descargarCSV('rango')">📅 Descargar Rango</button>
+            <button class="btn btn--cancel" onclick="document.getElementById('modal-export').style.display='none'">
+                Cancelar
+            </button>
+        </div>
+    </div>
 
     <script>
         const API = "/api";
@@ -301,6 +333,7 @@
         function mostrarDashboard() {
             document.getElementById('login-view').style.display     = 'none';
             document.getElementById('dashboard-view').style.display = 'block';
+            cargarEmails();
         }
 
         function logout() {
@@ -308,29 +341,6 @@
                 localStorage.removeItem('token_admin');
                 location.reload();
             }
-        }
-
-        // --- DESCARGAR EXCEL ---
-        async function descargarExcel() {
-            if (!confirm("¿Descargar reporte?")) return;
-            const btn = event.target;
-            btn.innerText = "⏳ ...";
-            try {
-                const res = await authFetch(API + '/reportes/exportar');
-                if (res.ok) {
-                    const blob = await res.blob();
-                    const url  = window.URL.createObjectURL(blob);
-                    const a    = document.createElement('a');
-                    a.href     = url;
-                    a.download = "Reporte_" + new Date().toISOString().slice(0, 10) + ".csv";
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                } else {
-                    alert("Error en descarga");
-                }
-            } catch (e) { alert("Error de conexión"); }
-            finally { btn.innerText = "📥 Bajar Excel"; }
         }
 
         // --- IMPRIMIR QRs ---
@@ -383,6 +393,108 @@
                 }
             );
         }        
+
+        // ── EXPORT MODAL ──────────────────────────────────────
+        function abrirModalExport() {
+            const hoy = new Date().toISOString().slice(0, 10);
+            const inicioMes = new Date(); inicioMes.setDate(1);
+            document.getElementById('export-desde').value = inicioMes.toISOString().slice(0, 10);
+            document.getElementById('export-hasta').value = hoy;
+            document.getElementById('modal-export').style.display = 'flex';
+        }
+
+        async function descargarCSV(tipo) {
+            document.getElementById('modal-export').style.display = 'none';
+
+            let url = API + '/reportes/exportar';
+            if (tipo === 'rango') {
+                const desde = document.getElementById('export-desde').value;
+                const hasta = document.getElementById('export-hasta').value;
+                if (!desde || !hasta) { alert("⚠️ Selecciona ambas fechas."); return; }
+                if (desde > hasta)    { alert("⚠️ La fecha de inicio debe ser anterior al fin."); return; }
+                url += `?desde=${desde}&hasta=${hasta}`;
+            }
+
+            try {
+                const res = await authFetch(url);
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const a    = document.createElement('a');
+                    a.href     = window.URL.createObjectURL(blob);
+                    // Extrae el nombre del header Content-Disposition si está disponible
+                    const cd   = res.headers.get('Content-Disposition') || '';
+                    const match = cd.match(/filename="?([^"]+)"?/);
+                    a.download = match ? match[1] : `Reporte_${new Date().toISOString().slice(0,10)}.csv`;
+                    document.body.appendChild(a); a.click(); a.remove();
+                } else {
+                    alert("❌ Error al generar el reporte.");
+                }
+            } catch(e) { alert("Error de conexión"); }
+        }
+
+        // ── EMAIL MANAGEMENT ─────────────────────────────────
+        async function cargarEmails() {
+            const div = document.getElementById('lista-emails');
+            try {
+                const res  = await authFetch(API + '/reportes/destinatarios');
+                const data = await res.json();
+                if (!data.length) {
+                    div.innerHTML = '<p class="empty-state">No hay destinatarios configurados.</p>';
+                    return;
+                }
+                let html = '<table><thead><tr><th>#</th><th>Email</th><th class="col-action">Acción</th></tr></thead><tbody>';
+                data.forEach((d, i) => {
+                    html += `<tr>
+                        <td><strong>#${i+1}</strong></td>
+                        <td>${d.email}</td>
+                        <td class="col-action">
+                            <button class="btn btn--sm btn--danger" onclick="eliminarEmail(${d.id})">🗑️ Eliminar</button>
+                        </td>
+                    </tr>`;
+                });
+                div.innerHTML = html + '</tbody></table>';
+            } catch(e) {
+                div.innerHTML = '<p class="empty-state empty-state--error">❌ Error al cargar.</p>';
+            }
+        }
+
+        async function agregarEmail() {
+            const email = document.getElementById('email-nuevo').value.trim();
+            if (!email) return;
+            try {
+                const res  = await authFetch(API + '/reportes/destinatarios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                alert((res.ok ? '✅ ' : '❌ ') + data.message);
+                if (res.ok) { document.getElementById('email-nuevo').value = ''; cargarEmails(); }
+            } catch(e) { alert("Error de conexión"); }
+        }
+
+        async function eliminarEmail(id) {
+            if (!confirm("¿Eliminar este destinatario?")) return;
+            try {
+                const res  = await authFetch(API + `/reportes/destinatarios/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (res.ok) cargarEmails();
+                else        alert("❌ " + data.message);
+            } catch(e) { alert("Error de conexión"); }
+        }
+
+        async function enviarReporteAhora() {
+            if (!confirm("¿Enviar el reporte del día anterior a todos los destinatarios ahora?")) return;
+            const btn = event.target;
+            btn.innerText = "⏳ Enviando..."; btn.disabled = true;
+            try {
+                const res  = await authFetch(API + '/reportes/enviar_reporte', { method: 'POST' });
+                const data = await res.json();
+                alert((res.ok ? '✅ ' : '❌ ') + data.message);
+            } catch(e) { alert("Error de conexión"); }
+            finally { btn.innerText = "📤 Enviar ahora"; btn.disabled = false; }
+        }
+
     </script>
 </body>
 </html>

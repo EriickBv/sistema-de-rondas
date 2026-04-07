@@ -2,6 +2,7 @@ Flask
 pytz
 flask-cors
 Flask-SQLAlchemy 
+Flask-APScheduler
 Flask-Migrate        
 PyJWT               
 pytest  

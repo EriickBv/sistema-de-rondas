@@ -53,3 +53,10 @@ class RegistroRonda(db.Model):
     # Relaciones para facilitar consultas (joins automáticos)
     guardia = db.relationship('Guardia', backref='registros')
     punto = db.relationship('PuntoControl', backref='registros')
+    
+class DestinatarioReporte(db.Model):
+    __tablename__ = 'destinatarios_reporte'
+    id         = db.Column(db.Integer, primary_key=True)
+    email      = db.Column(db.String(150), unique=True, nullable=False)
+    activo     = db.Column(db.Boolean, default=True)
+    creado_en  = db.Column(db.DateTime, default=datetime.now)

@@ -22,6 +22,7 @@ services:
       - "5000:5000"
     env_file:
       - .env
+    command: gunicorn --workers 1 --threads 2 --bind 0.0.0.0:5000 run:app
     depends_on:
       db:
         condition: service_healthy

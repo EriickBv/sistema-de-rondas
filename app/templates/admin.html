@@ -10,7 +10,6 @@
 </head>
 <body>
 
-<!-- ══════════════════════════════ LOGIN ══════════════════════════════ -->
 <div id="login-view" class="login-wrapper">
     <div class="login-card">
         <div class="login-brand">
@@ -32,10 +31,8 @@
     </div>
 </div>
 
-<!-- ══════════════════════════════ DASHBOARD ══════════════════════════════ -->
 <div id="dashboard-view" class="app-layout" style="display:none">
 
-    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -52,7 +49,7 @@
             </button>
             <button class="nav-item" data-section="sedes" onclick="navigateTo('sedes')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="1"/><path d="M8 3v18M16 3v18M2 9h20M2 15h20"/></svg>
-                <span>Sedes</span>
+                <span>Instalaciones</span>
             </button>
             <button class="nav-item" data-section="reportes" onclick="navigateTo('reportes')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -69,7 +66,6 @@
         </button>
     </aside>
 
-    <!-- MAIN -->
     <div class="main" id="main-content">
         <header class="topbar">
             <button class="menu-toggle" onclick="toggleSidebar()">
@@ -80,7 +76,6 @@
 
         <div class="content-area">
 
-            <!-- ═══════════ SECCIÓN: GUARDIAS ═══════════ -->
             <section id="section-guardias" class="section active">
                 <div class="card">
                     <div class="card-header">
@@ -106,9 +101,9 @@
                                 <input type="password" id="g-pass" class="input" placeholder="Contraseña de acceso">
                             </div>
                             <div class="field">
-                                <label class="field-label">Sede</label>
+                                <label class="field-label">Instalación</label>
                                 <select id="g-sede" class="input select">
-                                    <option value="">Sin sede asignada</option>
+                                    <option value="">Sin instalación asignada</option>
                                 </select>
                             </div>
                         </div>
@@ -131,7 +126,6 @@
                 </div>
             </section>
 
-            <!-- ═══════════ SECCIÓN: ZONAS ═══════════ -->
             <section id="section-zonas" class="section">
                 <div class="card">
                     <div class="card-header">
@@ -144,9 +138,9 @@
                                 <input type="text" id="z-nombre" class="input" placeholder="Ej: 1. Bodega Central">
                             </div>
                             <div class="field">
-                                <label class="field-label">Sede</label>
+                                <label class="field-label">Instalación</label>
                                 <select id="z-sede" class="input select">
-                                    <option value="">Sin sede asignada</option>
+                                    <option value="">Sin instalación asignada</option>
                                 </select>
                             </div>
                             <div class="field">
@@ -191,25 +185,24 @@
                 </div>
             </section>
 
-            <!-- ═══════════ SECCIÓN: SEDES ═══════════ -->
             <section id="section-sedes" class="section">
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Registrar Nueva Sede</h3>
+                        <h3 class="card-title">Registrar Nueva Instalación</h3>
                     </div>
                     <div class="card-body">
                         <div class="form-grid form-grid-narrow">
                             <div class="field">
-                                <label class="field-label">Nombre de la Sede</label>
+                                <label class="field-label">Nombre de la Instalación</label>
                                 <input type="text" id="s-nombre" class="input" placeholder="Ej: Casa Matriz, Sucursal Norte">
                             </div>
                         </div>
-                        <button class="btn btn-primary" onclick="crearSede()">Registrar Sede</button>
+                        <button class="btn btn-primary" onclick="crearSede()">Registrar Instalación</button>
                     </div>
                 </div>
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Sedes Registradas</h3>
+                        <h3 class="card-title">Instalaciones Registradas</h3>
                         <button class="btn btn-ghost btn-sm" onclick="renderizarSeccionSedes()">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                             Actualizar
@@ -223,14 +216,13 @@
                 </div>
             </section>
 
-            <!-- ═══════════ SECCIÓN: REPORTES ═══════════ -->
             <section id="section-reportes" class="section">
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Rondas del Día</h3>
                         <div class="card-header-actions">
                             <select id="filtro-sede-hoy" class="input select select-sm" onchange="verRondasHoy()">
-                                <option value="">Todas las sedes</option>
+                                <option value="">Todas las instalaciones</option>
                             </select>
                             <button class="btn btn-ghost btn-sm" onclick="verRondasHoy()">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -244,13 +236,12 @@
                     </div>
                     <div class="card-body no-pad">
                         <div id="tabla-reportes" class="table-container">
-                            <p class="empty-state">Selecciona una sede o presiona "Actualizar" para cargar los datos.</p>
+                            <p class="empty-state">Selecciona una instalación o presiona "Actualizar" para cargar los datos.</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- ═══════════ SECCIÓN: CORREOS ═══════════ -->
             <section id="section-correos" class="section">
                 <div class="card">
                     <div class="card-header">
@@ -258,7 +249,7 @@
                     </div>
                     <div class="card-body">
                         <p class="hint" style="margin-bottom:20px;">
-                            El sistema envía automáticamente el reporte del día anterior a las 07:00 AM, con un archivo CSV por sede como adjunto.
+                            El sistema envía automáticamente el reporte del día anterior a las 07:00 AM, con un archivo CSV por instalación como adjunto.
                         </p>
                         <div class="inline-form">
                             <div class="field" style="flex:1;min-width:200px">
@@ -283,12 +274,7 @@
                 </div>
             </section>
 
-        </div><!-- /content-area -->
-    </div><!-- /main -->
-</div><!-- /dashboard-view -->
-
-<!-- ══════════ MODAL: EXPORT CSV ══════════ -->
-<div id="modal-export" class="modal-overlay" style="display:none">
+        </div></div></div><div id="modal-export" class="modal-overlay" style="display:none">
     <div class="modal">
         <div class="modal-header">
             <h3>Exportar Reporte CSV</h3>
@@ -298,9 +284,9 @@
         </div>
         <div class="modal-body">
             <div class="field">
-                <label class="field-label">Filtrar por Sede</label>
+                <label class="field-label">Filtrar por Instalación</label>
                 <select id="export-sede" class="input select">
-                    <option value="">Todas las sedes</option>
+                    <option value="">Todas las instalaciones</option>
                 </select>
             </div>
             <div class="form-row-2">
@@ -322,7 +308,6 @@
     </div>
 </div>
 
-<!-- Overlay mobile -->
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <script>
@@ -387,7 +372,7 @@ async function authFetch(url, options = {}) {
 }
 
 // ─── NAVEGACIÓN ───────────────────────────────────────────────────
-const PAGE_TITLES = { guardias: 'Guardias', zonas: 'Zonas', sedes: 'Sedes', reportes: 'Reportes', correos: 'Notificaciones' };
+const PAGE_TITLES = { guardias: 'Guardias', zonas: 'Zonas', sedes: 'Instalaciones', reportes: 'Reportes', correos: 'Notificaciones' };
 
 function navigateTo(section) {
     document.querySelectorAll('.section').forEach(s  => s.classList.remove('active'));
@@ -426,8 +411,8 @@ function populateSelect(selectId, incluyeTodos = false) {
     if (!sel) return;
     const curr = sel.value;
     sel.innerHTML = incluyeTodos
-        ? '<option value="">Todas las sedes</option>'
-        : '<option value="">Sin sede asignada</option>';
+        ? '<option value="">Todas las instalaciones</option>'
+        : '<option value="">Sin instalación asignada</option>';
     sedesCache.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.id;
@@ -454,7 +439,7 @@ async function renderizarSeccionSedes() {
     await cargarSedes();
     const div = document.getElementById('tabla-sedes');
     if (!sedesCache.length) {
-        div.innerHTML = '<p class="empty-state">No hay sedes registradas.</p>';
+        div.innerHTML = '<p class="empty-state">No hay instalaciones registradas.</p>';
         return;
     }
     let html = `<table><thead><tr>
@@ -494,7 +479,7 @@ async function crearSede() {
 }
 
 async function eliminarSede(id, nombre) {
-    if (!confirm(`¿Eliminar la sede "${nombre}"?\nGuardias y zonas asociados quedarán sin sede asignada.`)) return;
+    if (!confirm(`¿Eliminar la instalación "${nombre}"?\nGuardias y zonas asociados quedarán sin instalación asignada.`)) return;
     try {
         const res  = await authFetch(`${API}/sedes/${id}`, { method: 'DELETE' });
         const data = await res.json();
@@ -540,11 +525,11 @@ async function verGuardias() {
 
         let html = `<table><thead><tr>
             <th>#</th><th>Nombre</th><th>RUT</th><th>Email</th>
-            <th>Sede</th><th>Estado</th><th class="col-action">Acción</th>
+            <th>Instalación</th><th>Estado</th><th class="col-action">Acción</th>
         </tr></thead><tbody>`;
 
         data.forEach((g, i) => {
-            let sedeOpts = '<option value="">Sin sede</option>';
+            let sedeOpts = '<option value="">Sin instalación</option>';
             sedesCache.forEach(s => {
                 const sel = String(s.id) === String(g.id_sede) ? ' selected' : '';
                 sedeOpts += `<option value="${s.id}"${sel}>${s.nombre}</option>`;
@@ -635,13 +620,13 @@ async function verZonas() {
         if (!data.length) { div.innerHTML = '<p class="empty-state">No hay zonas registradas.</p>'; return; }
 
         let html = `<table><thead><tr>
-            <th>#</th><th>Nombre</th><th>Sede</th><th>Orden</th>
+            <th>#</th><th>Nombre</th><th>Instalación</th><th>Orden</th>
             <th>Latitud</th><th>Longitud</th><th class="col-action">Acción</th>
         </tr></thead><tbody>`;
 
         data.forEach((z, i) => {
             const sedeName = sedesCache.find(s => String(s.id) === String(z.id_sede))?.nombre
-                          || '<span class="text-muted">Sin sede</span>';
+                          || '<span class="text-muted">Sin instalación</span>';
             html += `<tr>
                 <td class="text-muted">${i + 1}</td>
                 <td><strong>${z.Nombre}</strong></td>
@@ -846,7 +831,7 @@ async function eliminarEmail(id) {
 }
 
 async function enviarReporteAhora() {
-    if (!confirm('¿Enviar los reportes del día anterior (separados por sede) a todos los destinatarios ahora?')) return;
+    if (!confirm('¿Enviar los reportes del día anterior (separados por instalación) a todos los destinatarios ahora?')) return;
     const btn = event.currentTarget;
     const originalText = btn.innerHTML;
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin" style="width:16px;height:16px;margin-right:8px;animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10"/><path d="M12 2v4"/></svg> Enviando...';

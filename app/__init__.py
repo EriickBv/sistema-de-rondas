@@ -3,6 +3,7 @@ from config import config
 from .extensions import db, cors, migrate, scheduler
 from .web import web_bp
 from .api.reportes import reportes_bp
+from .api.sedes import sedes_bp
 
 def create_app(config_name='default'):
     app = Flask(__name__)
@@ -27,5 +28,6 @@ def create_app(config_name='default'):
     app.register_blueprint(rondas_bp,    url_prefix='/api/rondas')
     app.register_blueprint(zonas_bp,     url_prefix='/api/zonas')
     app.register_blueprint(reportes_bp,  url_prefix='/api/reportes')
+    app.register_blueprint(sedes_bp, url_prefix='/api/sedes')
     app.register_blueprint(web_bp)
     return app

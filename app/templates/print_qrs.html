@@ -3,18 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <title>Imprimir Códigos QR</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
 </head>
 <body>
 
-    <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR AHORA</button>
+    <div class="print-header">
+        <button class="btn-print" onclick="window.print()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            Imprimir QRs
+        </button>
+    </div>
 
     <div class="qr-grid">
         {% for item in qrs %}
         <div class="qr-card">
             <h2 class="qr-card__name">{{ item.nombre }}</h2>
             <img class="qr-card__image" src="data:image/png;base64,{{ item.img }}" alt="QR {{ item.nombre }}">
-            <p class="qr-card__token">ID: {{ item.token }}</p>
         </div>
         {% endfor %}
     </div>

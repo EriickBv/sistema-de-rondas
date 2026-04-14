@@ -1,30 +1,38 @@
-# Sistema de Control de Rondas y Seguridad
+# Sistema de Control de Rondas y Seguridad (Pro)
 
-Sistema web integral para la gestión, monitoreo y auditoría de rondas de seguridad mediante escaneo de códigos QR. Diseñado para ser desplegado mediante contenedores Docker para garantizar estabilidad y facilidad de mantenimiento.
+Sistema web integral corporativo para la gestión, monitoreo y auditoría de rondas de seguridad mediante geolocalización y escaneo de códigos QR. Diseñado con una arquitectura multi-sucursal y empaquetado en contenedores Docker para garantizar alta disponibilidad y facilidad de mantenimiento.
 
-## Características Principales
+##  Stack Tecnológico
+* **Backend:** Python 3.9, Flask, SQLAlchemy (ORM).
+* **Base de Datos:** MySQL 8.0.
+* **Servidor Web:** Gunicorn (WSGI) preparado para producción.
+* **Frontend:** HTML5, CSS3, JavaScript.
+* **Seguridad:** Autenticación por JWT (JSON Web Tokens) y contraseñas con Hash (Werkzeug).
+
+##  Características Principales
+* **Arquitectura Multi-Instalación:** Aislamiento lógico de guardias y zonas por sedes (sucursales).
 * **Gestión de Guardias:** Alta, baja y control de usuarios activos.
-* **Mapeo de Zonas:** Creación de puntos de control con coordenadas GPS.
-* **Generación de QR:** Módulo para visualizar e imprimir etiquetas identificadoras.
-* **Reportes Avanzados:**
-    * **Visualización:** Rondas del día con estados (Correcto, Tarde, Lejos o Crítico).
-    * **Exportación:** Descarga de reportes en CSV por rango de fechas.
-    * **Automatización:** Envío diario automático del reporte de la jornada anterior a las 07:00 AM.
-* **App Móvil (Web):** Interfaz adaptativa para el escaneo desde celulares.
+* **Mapeo de Zonas:** Creación de puntos de control con validación de coordenadas GPS y radio de tolerancia.
+* **Generación de QR:** Módulo nativo para visualizar e imprimir etiquetas identificadoras por sede.
+* **Reportes Avanzados y Auditoría:**
+    * **Visualización:** Rondas del día con estados dinámicos (Correcto, Tarde, Lejos o Crítico).
+    * **Exportación:** Descarga de reportes en CSV por instalación y rango de fechas.
+    * **Automatización:** Envío diario automático del reporte (vía SMTP) de la jornada anterior a las 07:00 AM.
+* **App Móvil de Terreno:** Interfaz adaptativa, de bajo consumo de datos y diseñada para escaneo rápido.
 
 ---
 
-## Requisitos de Instalación
+##  Requisitos de Instalación
 * **Docker** (v20.10+).
 * **Docker Compose** (v1.29+).
-* **Configuración SMTP:** Cuenta de correo (ej: Gmail con "Contraseña de Aplicación").
+* **Configuración SMTP:** Cuenta de correo emisor configurada (ej: Gmail con "Contraseña de Aplicación" o SMTP Corporativo).
 
-> **IMPORTANTE: USO DE CÁMARA Y HTTPS**
-> Los navegadores móviles bloquean el acceso a la cámara si el sitio no es seguro. Para usar el escáner QR es **obligatorio** configurar un Proxy Inverso con certificado SSL.
+> ** IMPORTANTE: USO DE CÁMARA Y HTTPS**
+> Las políticas de seguridad de navegadores móviles (iOS/Android) bloquean el acceso a la cámara si el sitio no es seguro. Para usar el escáner QR en terreno, es **obligatorio** que el servidor de producción cuente con un Proxy Inverso (Nginx/Apache) y un certificado SSL (HTTPS).
 
 ---
 
-## Despliegue Paso a Paso
+##  Despliegue Paso a Paso
 
 ### 1. Configuración de Entorno
 Ejecute el script en su terminal para establecer claves y credenciales:
@@ -47,12 +55,10 @@ Ejecute estos comandos en orden para crear las tablas y el administrador:
 > * **Contraseña:** 123456
 
 ---
-
 ## Reportes por Correo
-1. Ingrese al panel de **Administrador**.
-2. En la sección **Reportes Automáticos**, agregue los emails.
-3. Use el botón **Enviar ahora** para validar la configuración de inmediato.
-
+  * Ingrese al panel de Administrador.
+  * Diríjase a la sección Notificaciones y agregue los correos de los destinatarios.
+  * Use el botón Enviar ahora para forzar un envío manual y validar la conectividad SMTP de inmediato.
 ---
 
 ## Utilidades de Administración
@@ -71,25 +77,22 @@ Este script centraliza el control de acceso desde la terminal, permitiendo admin
 
 > **Seguridad**: Las contraseñas se almacenan mediante hashing cifrado. Al no existir formularios de creación de administradores en la web, el control de privilegios queda restringido a usuarios con acceso al servidor.
 
-### Impresión de QR
-1. En el Panel, clic en **🖨️ Imprimir QRs**.
-2. Presione `Ctrl + P` en la vista de impresión.
+### Impresión de Códigos QR físicos
+*   En el Panel Web, vaya a Zonas y seleccione la instalación deseada en el filtro.
+*   Haga clic en Imprimir QRs.
+*   En la nueva pestaña, presione Ctrl + P (o Cmd + P en Mac). El diseño está optimizado con reglas CSS @media print para hojas tamaño A4.
 
 ---
-
 ## Acceso al Sistema
 * **Servidor:** `http://localhost:5000`
 * **Red Local:** `http://<IP_DEL_SERVIDOR>:5000`
-
 ---
-
 ## Comandos Útiles
-* **Ver logs:** `docker-compose logs -f web`
+* **Ver logs web:** `docker-compose logs -f web`
+* **Ver logs de la DB:** `docker-compose logs -f db`
 * **Detener:** `docker-compose down`
 * **Reiniciar:** `docker-compose down && docker-compose up -d`
-
 ---
-
 ## Estructura del Proyecto
 * `/app`: Código fuente de la aplicación Flask.
 * `/migrations`: Scripts de versión de la base de datos.

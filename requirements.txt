@@ -4,8 +4,7 @@ flask-cors
 Flask-SQLAlchemy 
 Flask-APScheduler
 Flask-Migrate        
-PyJWT               
-pytest  
+PyJWT                
 python-dotenv         
 mysql-connector-python
 qrcode[pil]

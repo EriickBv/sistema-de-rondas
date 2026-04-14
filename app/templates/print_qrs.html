@@ -10,20 +10,54 @@
 <body>
 
     <div class="print-header">
+        <h2 style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-right: auto;">
+            {{ sede_titulo }}
+        </h2>
         <button class="btn-print" onclick="window.print()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
             Imprimir QRs
         </button>
     </div>
-
+    <p class="qr-titulo-impresion">{{ sede_titulo }}</p>
     <div class="qr-grid">
         {% for item in qrs %}
         <div class="qr-card">
             <h2 class="qr-card__name">{{ item.nombre }}</h2>
             <img class="qr-card__image" src="data:image/png;base64,{{ item.img }}" alt="QR {{ item.nombre }}">
+            <button class="btn-print" style="margin-top: 15px; background: #ef4444; font-size: 0.75rem; padding: 6px 12px;" onclick="regenerarQR({{ item.id }}, '{{ item.nombre }}')">
+                ↻ Regenerar Token
+            </button>
         </div>
         {% endfor %}
     </div>
-
+<script>
+    async function regenerarQR(idZona, nombreZona) {
+        if (!confirm(`⚠️ ¿Estás seguro de regenerar el QR para "${nombreZona}"?\nEl código físico actual dejará de funcionar inmediatamente.`)) return;
+        const token = localStorage.getItem('token_admin');
+        if (!token) {
+            alert("No tienes sesión de administrador activa.");
+            return;
+        }
+        try {
+            const res = await fetch(`/api/zonas/${idZona}/regenerar_qr`, {
+                method: 'PUT',
+                headers: { 
+                    'Authorization': token,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                alert(data.message);
+                location.reload(); 
+            } else {
+                alert("Error: " + data.message);
+            }
+        } catch (error) {
+            alert("Error de conexión al regenerar el QR.");
+        }
+    }
+</script>
 </body>
 </html>

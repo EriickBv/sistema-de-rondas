@@ -143,3 +143,41 @@ body {
     padding: 20px;
   }
 }
+
+@media print {
+    .btn-print, .btn-regenerar-inline {
+        display: none !important;
+    }
+    
+    .qr-card {
+        border: 1px solid #000;
+    }
+}
+
+.btn-regenerar-inline {
+    margin-top: 15px;
+    background: #fee2e2;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-regenerar-inline:hover {
+    background: #ef4444;
+    color: white;
+}
+@media print {
+    .qr-titulo-impresion {
+        display: block;
+        text-align: center;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 16px;
+        color: #000;
+    }
+}

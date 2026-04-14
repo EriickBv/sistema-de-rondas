@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 </head>
 <body>
 
@@ -171,6 +172,12 @@
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                                 Actualizar
                             </button>
+                            <select id="filtro-sede-ver-zonas" class="input select select-sm" onchange="verZonas()" style="width: auto; min-width: 160px;">
+                                <option value="">Todas las instalaciones</option>
+                            </select>
+                            <select id="filtro-sede-qr" class="input select select-sm" style="width: auto; min-width: 160px;">
+                                <option value="">Todas las instalaciones</option>
+                            </select>
                             <button class="btn btn-secondary btn-sm" onclick="abrirImpresionQRs()">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                                 Imprimir QRs
@@ -432,7 +439,25 @@ async function cargarSedes() {
         populateSelect('z-sede');
         populateSelect('filtro-sede-hoy', true);
         populateSelect('export-sede', true);
+        populateSelect('filtro-sede-qr', true);
+        populateSelect('filtro-sede-ver-zonas', true);
     } catch(e) { console.error('Error cargando sedes:', e); }
+}
+
+async function abrirImpresionQRs() {
+    const idSede = document.getElementById('filtro-sede-qr').value;
+    const qs     = idSede ? `?id_sede=${idSede}` : '';
+    try {
+        const res = await authFetch(`${API}/reportes/imprimir_qrs${qs}`);
+        if (res.ok) {
+            const html = await res.text();
+            const v = window.open('', '_blank');
+            v.document.write(html);
+            v.document.close();
+        } else {
+            showToast('Error al generar los QRs', 'error');
+        }
+    } catch (e) { showToast('Error de conexión.', 'error'); }
 }
 
 async function renderizarSeccionSedes() {
@@ -612,26 +637,32 @@ async function crearZona() {
 }
 
 async function verZonas() {
-    const div = document.getElementById('tabla-zonas');
+    const div    = document.getElementById('tabla-zonas');
+    const idSede = document.getElementById('filtro-sede-ver-zonas')?.value || '';
     div.innerHTML = '<p class="empty-state">Cargando...</p>';
     try {
-        const res  = await authFetch(`${API}/reportes?tipo=puntos`);
+        const url = `${API}/reportes?tipo=puntos${idSede ? '&id_sede=' + idSede : ''}`;
+        const res  = await authFetch(url);
         const data = await res.json();
         if (!data.length) { div.innerHTML = '<p class="empty-state">No hay zonas registradas.</p>'; return; }
-
+        const dragEnabled = !idSede;
+        const dragStyle   = dragEnabled
+            ? 'cursor: grab; color: var(--text-muted);'
+            : 'opacity: 0.25; cursor: not-allowed;';
         let html = `<table><thead><tr>
-            <th>#</th><th>Nombre</th><th>Instalación</th><th>Orden</th>
+            <th style="width: 40px"></th> <th>Orden</th><th>Nombre</th><th>Instalación</th>
             <th>Latitud</th><th>Longitud</th><th class="col-action">Acción</th>
-        </tr></thead><tbody>`;
-
-        data.forEach((z, i) => {
+        </tr></thead><tbody id="zonas-tbody">`;
+        data.forEach((z) => {
             const sedeName = sedesCache.find(s => String(s.id) === String(z.id_sede))?.nombre
                           || '<span class="text-muted">Sin instalación</span>';
-            html += `<tr>
-                <td class="text-muted">${i + 1}</td>
-                <td><strong>${z.Nombre}</strong></td>
+            html += `<tr data-id="${z.ID}">
+                <td style="${dragStyle}">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                </td>
+                <td class="orden-celda"><strong>${z.Orden}</strong></td>
+                <td>${z.Nombre}</td>
                 <td>${sedeName}</td>
-                <td>${z.Orden}</td>
                 <td class="font-mono">${z.Latitud}</td>
                 <td class="font-mono">${z.Longitud}</td>
                 <td class="col-action">
@@ -640,11 +671,37 @@ async function verZonas() {
             </tr>`;
         });
         div.innerHTML = html + '</tbody></table>';
+        if (dragEnabled) {
+            const tbody = document.getElementById('zonas-tbody');
+            new Sortable(tbody, {
+                animation: 150,
+                ghostClass: 'bg-app',
+                onEnd: async function () {
+                    const filas = tbody.querySelectorAll('tr');
+                    const nuevoOrdenIds = Array.from(filas).map(fila => parseInt(fila.getAttribute('data-id')));
+                    filas.forEach((fila, index) => {
+                        fila.querySelector('.orden-celda strong').innerText = index + 1;
+                    });
+                    try {
+                        const res = await authFetch(`${API}/zonas/reordenar`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ orden: nuevoOrdenIds })
+                        });
+                        if (res.ok) {
+                            showToast('Orden guardado correctamente', 'success');
+                        } else {
+                            showToast('Error al guardar el orden', 'error');
+                        }
+                    } catch(e) { showToast('Error de conexión', 'error'); }
+                }
+            });
+        }
+
     } catch(e) {
         div.innerHTML = '<p class="empty-state empty-error">Error al cargar datos.</p>';
     }
 }
-
 async function eliminarZona(id) {
     if (!confirm('¿Eliminar esta zona? Los registros históricos asociados se mantendrán.')) return;
     try {
@@ -845,20 +902,6 @@ async function enviarReporteAhora() {
         btn.innerHTML = originalText;
         btn.disabled = false;
     }
-}
-
-async function abrirImpresionQRs() {
-    try {
-        const res = await authFetch(`${API}/reportes/imprimir_qrs`);
-        if (res.ok) {
-            const html = await res.text();
-            const v = window.open('', '_blank');
-            v.document.write(html);
-            v.document.close();
-        } else {
-            showToast('Error al generar los QRs', 'error');
-        }
-    } catch (e) { showToast('Error de conexión.', 'error'); }
 }
 
 // ─── SISTEMA DE TOASTS (NOTIFICACIONES UI) ────────────────────────

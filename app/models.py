@@ -57,10 +57,16 @@ class PuntoControl(db.Model):
 
 
 class RegistroRonda(db.Model):
-    __tablename__   = 'registros_ronda'
+    __tablename__ = 'registros_ronda'
+    __table_args__ = (
+        db.Index('ix_ronda_guardia_fecha', 'id_guardia', 'fecha_hora'),
+        db.Index('ix_ronda_fecha_hora',    'fecha_hora'),
+        db.Index('ix_ronda_id_punto',      'id_punto'),
+    )
+
     id_registro     = db.Column(db.BigInteger, primary_key=True)
-    id_guardia      = db.Column(db.Integer, db.ForeignKey('guardias.id_guardia'))
-    id_punto        = db.Column(db.Integer, db.ForeignKey('puntos_control.id_punto'))
+    id_guardia      = db.Column(db.Integer, db.ForeignKey('guardias.id_guardia', ondelete='SET NULL'), nullable=True)
+    id_punto        = db.Column(db.Integer, db.ForeignKey('puntos_control.id_punto', ondelete='SET NULL'), nullable=True)
     fecha_hora      = db.Column(db.DateTime, default=datetime.now)
     lat_real        = db.Column(db.Numeric(10, 8))
     long_real       = db.Column(db.Numeric(11, 8))

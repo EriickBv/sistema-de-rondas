@@ -25,13 +25,18 @@ SECRET_KEY="{secret_key}"
 DATABASE_URL=mysql+mysqlconnector://admin:{db_pass}@db/sistema_rondas
 
 # ==========================================
-# RUTAS DEL SISTEMA (Modificable)
+# RUTAS DEL SISTEMA ("Link" de la web admin Modificable)
 # ==========================================
 RUTA_ADMIN=/admin
 
 # ==========================================
 #  CONFIGURACIÓN DE CORREO - ¡CAMBIAR AQUÍ!
 # ==========================================
+# Configura aquí el servidor de salida de la empresa.
+# Ejemplos comunes:
+#   Gmail: smtp.gmail.com (Puerto 587)
+#   Office 365 / Outlook: smtp.office365.com (Puerto 587)
+#   Corporativo: mail.midominio.cl (Puerto 587 o 465)
 MAIL_SERVER=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USERNAME=tu_correo@gmail.com
@@ -39,7 +44,7 @@ MAIL_PASSWORD=tu_app_password_de_gmail
 MAIL_FROM=Sistema Rondas <tu_correo@gmail.com>
 """
 
-    with open(".env", "w") as f:
+    with open(".env", "w", encoding="utf-8") as f:
         f.write(contenido)
     
     print("✅ Archivo .env creado con claves seguras.")

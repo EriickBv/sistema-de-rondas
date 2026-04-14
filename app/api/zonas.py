@@ -5,10 +5,8 @@ from app.models import PuntoControl
 from app.utils import token_required
 
 zonas_bp = Blueprint('zonas', __name__)
-
-# --- Función Auxiliar ---
 def reordenar_zonas():
-    zonas = PuntoControl.query.order_by(PuntoControl.id_punto).all()
+    zonas = PuntoControl.query.order_by(PuntoControl.numero_orden, PuntoControl.id_punto).all()
     for index, zona in enumerate(zonas):
         zona.numero_orden = index + 1
     db.session.commit()
@@ -63,6 +61,43 @@ def eliminar_zona(id_zona):
         reordenar_zonas()
         
         return jsonify({'message': f'Zona "{nombre}" eliminada'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': str(e)}), 500
+
+@zonas_bp.route('/reordenar', methods=['PUT'])
+@token_required
+def reordenar_manual():
+    if request.usuario_rol != 'admin':
+        return jsonify({'message': 'No autorizado'}), 403
+
+    data = request.get_json()
+    orden_ids = data.get('orden', [])
+
+    try:
+        for index, id_zona in enumerate(orden_ids):
+            zona = PuntoControl.query.get(id_zona)
+            if zona:
+                zona.numero_orden = index + 1
+                
+        db.session.commit()
+        return jsonify({'message': 'Orden actualizado correctamente'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': str(e)}), 500
+
+@zonas_bp.route('/<int:id_zona>/regenerar_qr', methods=['PUT'])
+@token_required
+def regenerar_qr(id_zona):
+    if request.usuario_rol != 'admin':
+        return jsonify({'message': 'No autorizado'}), 403
+
+    try:
+        zona = PuntoControl.query.get_or_404(id_zona)
+        import uuid
+        zona.token_qr = str(uuid.uuid4().hex)[:12].upper()
+        db.session.commit()
+        return jsonify({'message': f'QR de "{zona.nombre_zona}" regenerado'}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': str(e)}), 500

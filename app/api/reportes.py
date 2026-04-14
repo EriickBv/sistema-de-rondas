@@ -356,10 +356,18 @@ def enviar_reporte_manual():
 def imprimir_qrs():
     if request.usuario_rol != 'admin':
         return jsonify({"message": "No permitido"}), 403
-
-    puntos    = PuntoControl.query.all()
+    id_sede_str = request.args.get('id_sede')
+    id_sede     = int(id_sede_str) if id_sede_str and id_sede_str.isdigit() else None
+    q = PuntoControl.query
+    if id_sede:
+        q = q.filter_by(id_sede=id_sede)
+    puntos = q.order_by(PuntoControl.numero_orden).all()
+    sede_titulo = "Todas las Instalaciones"
+    if id_sede:
+        sede_obj = Sede.query.get(id_sede)
+        if sede_obj:
+            sede_titulo = sede_obj.nombre
     lista_qrs = []
-
     for p in puntos:
         qr = qrcode.QRCode(version=1, box_size=10, border=4)
         qr.add_data(p.token_qr)
@@ -368,9 +376,10 @@ def imprimir_qrs():
         buffer = BytesIO()
         img.save(buffer, format="PNG")
         lista_qrs.append({
+            "id":     p.id_punto,
             "nombre": p.nombre_zona,
             "token":  p.token_qr,
             "img":    base64.b64encode(buffer.getvalue()).decode()
         })
 
-    return render_template('print_qrs.html', qrs=lista_qrs)
+    return render_template('print_qrs.html', qrs=lista_qrs, sede_titulo=sede_titulo)

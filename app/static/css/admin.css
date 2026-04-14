@@ -1,5 +1,4 @@
 :root {
-  /* Paleta Corporativa SaaS */
   --bg-app: #f4f7f9;
   --bg-sidebar: #0f172a;
   --bg-card: #ffffff;
@@ -388,4 +387,22 @@ tr:hover td { background: #f8fafc; }
   .card-header-actions { width: 100%; display: flex; flex-wrap: wrap; }
   .form-actions { flex-direction: column; }
   .btn { width: 100%; }
+}
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: var(--bg-app) !important;
+    border: 2px dashed var(--primary);
+}
+.sortable-chosen {
+    background-color: #f8fafc;
+    cursor: grabbing !important;
+}
+td svg {
+    vertical-align: middle;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+tr:hover td svg {
+    opacity: 1;
 }

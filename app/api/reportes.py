@@ -46,8 +46,6 @@ def _query_registros(desde_utc=None, hasta_utc=None, id_sede=None):
                .filter(Guardia.id_sede == id_sede))
     return q.order_by(RegistroRonda.fecha_hora.desc()).all()
 
-
-# Encabezado CSV actualizado: incluye columna Sede
 HEADER_CSV = ('Fecha y Hora', 'Sede', 'Guardia', 'RUT',
               'Punto de Control', 'Observacion', 'Distancia Error (m)')
 
@@ -72,16 +70,16 @@ def _filas_csv(registros):
 @token_required
 def obtener_reportes():
     tipo = request.args.get('tipo')
-
-    # Parseo del filtro de sede (opcional para todos los tipos)
     id_sede_str    = request.args.get('id_sede')
     id_sede_filter = int(id_sede_str) if id_sede_str and id_sede_str.isdigit() else None
 
-    if tipo == 'hoy':
-        hoy = datetime.date.today()
-        q = RegistroRonda.query.filter(
-            RegistroRonda.fecha_hora >= datetime.datetime.combine(hoy, datetime.time.min),
-            RegistroRonda.fecha_hora <= datetime.datetime.combine(hoy, datetime.time.max)
+        if tipo == 'hoy':
+          hoy_str = datetime.date.today().isoformat()
+          inicio_hoy_utc, fin_hoy_utc = _rango_utc(hoy_str, hoy_str)
+        
+          q = RegistroRonda.query.filter(
+              RegistroRonda.fecha_hora >= inicio_hoy_utc,
+              RegistroRonda.fecha_hora <= fin_hoy_utc
         )
         if id_sede_filter:
             q = (q.join(Guardia, RegistroRonda.id_guardia == Guardia.id_guardia, isouter=True)
@@ -190,8 +188,6 @@ def exportar_csv():
         for fila in _filas_csv(_query_registros(desde_utc, hasta_utc, id_sede)):
             w.writerow(fila)
             yield buf.getvalue(); buf.seek(0); buf.truncate(0)
-
-    # Nombre dinámico del archivo
     sede_label = ""
     if id_sede:
         sede_obj = Sede.query.get(id_sede)
@@ -276,8 +272,6 @@ def enviar_reporte_diario():
     if not all([mail_server, mail_user, mail_password]):
         print("SMTP no configurado. Revisa las variables MAIL_* en .env")
         return
-
-    # Construir adjuntos: un CSV por sede con actividad
     adjuntos = []
     sedes = Sede.query.order_by(Sede.nombre).all()
 
@@ -288,16 +282,13 @@ def enviar_reporte_diario():
                 nombre_archivo = f"Reporte_{sede.nombre.replace(' ', '_')}_{ayer.isoformat()}.csv"
                 adjuntos.append((nombre_archivo, _csv_en_memoria(registros_sede)))
 
-        # Registros de guardias sin sede asignada
         registros_sin_sede = _query_registros(desde_utc, hasta_utc, id_sede=None)
-        # Filtramos solo los que realmente no tienen sede (la query sin id_sede trae todos)
         registros_sin_sede = [r for r in _query_registros(desde_utc, hasta_utc)
                               if not r.guardia or r.guardia.id_sede is None]
         if registros_sin_sede:
             adjuntos.append((f"Reporte_SinSede_{ayer.isoformat()}.csv",
                              _csv_en_memoria(registros_sin_sede)))
     else:
-        # Sin sedes creadas: un solo CSV global
         registros = _query_registros(desde_utc, hasta_utc)
         adjuntos.append((f"Reporte_{ayer.isoformat()}.csv", _csv_en_memoria(registros)))
 

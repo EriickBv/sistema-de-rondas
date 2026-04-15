@@ -70,20 +70,22 @@ def _filas_csv(registros):
 @token_required
 def obtener_reportes():
     tipo = request.args.get('tipo')
-    id_sede_str    = request.args.get('id_sede')
+    id_sede_str = request.args.get('id_sede')
     id_sede_filter = int(id_sede_str) if id_sede_str and id_sede_str.isdigit() else None
 
-        if tipo == 'hoy':
-          hoy_str = datetime.date.today().isoformat()
-          inicio_hoy_utc, fin_hoy_utc = _rango_utc(hoy_str, hoy_str)
+    if tipo == 'hoy':
+        hoy_str = datetime.date.today().isoformat()
+        inicio_hoy_utc, fin_hoy_utc = _rango_utc(hoy_str, hoy_str)
         
-          q = RegistroRonda.query.filter(
-              RegistroRonda.fecha_hora >= inicio_hoy_utc,
-              RegistroRonda.fecha_hora <= fin_hoy_utc
+        q = RegistroRonda.query.filter(
+            RegistroRonda.fecha_hora >= inicio_hoy_utc,
+            RegistroRonda.fecha_hora <= fin_hoy_utc
         )
+        
         if id_sede_filter:
             q = (q.join(Guardia, RegistroRonda.id_guardia == Guardia.id_guardia, isouter=True)
                    .filter(Guardia.id_sede == id_sede_filter))
+            
         registros = q.order_by(RegistroRonda.fecha_hora.asc()).all()
 
         data = []
@@ -138,11 +140,11 @@ def obtener_reportes():
             q = q.filter_by(id_sede=id_sede_filter)
         guardias = q.all()
         return jsonify([{
-            "ID":     g.id_guardia,
-            "Nombre": g.nombre,
-            "RUT":    g.rut,
-            "Email":  g.email,
-            "Activo": g.activo,
+            "ID":      g.id_guardia,
+            "Nombre":  g.nombre,
+            "RUT":     g.rut,
+            "Email":   g.email,
+            "Activo":  g.activo,
             "id_sede": g.id_sede
         } for g in guardias]), 200
 
@@ -162,7 +164,6 @@ def obtener_reportes():
         } for p in puntos]), 200
 
     return jsonify({"message": "Tipo de reporte no válido"}), 400
-
 
 @reportes_bp.route('/exportar', methods=['GET'])
 @token_required

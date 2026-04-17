@@ -380,6 +380,7 @@ async function authFetch(url, options = {}) {
 
 // ─── NAVEGACIÓN ───────────────────────────────────────────────────
 const PAGE_TITLES = { guardias: 'Guardias', zonas: 'Zonas', sedes: 'Instalaciones', reportes: 'Reportes', correos: 'Notificaciones' };
+let intervalRondas = null;
 
 function navigateTo(section) {
     document.querySelectorAll('.section').forEach(s  => s.classList.remove('active'));
@@ -388,7 +389,16 @@ function navigateTo(section) {
     document.querySelector(`[data-section="${section}"]`).classList.add('active');
     document.getElementById('page-title').innerText = PAGE_TITLES[section];
     closeSidebar();
-    if (section === 'reportes') verRondasHoy();
+
+    if (intervalRondas) {
+        clearInterval(intervalRondas);
+        intervalRondas = null;
+    }
+    if (section === 'reportes') {
+        verRondasHoy();
+        intervalRondas = setInterval(() => verRondasHoy(true), 10000);
+    }
+
     if (section === 'sedes')    renderizarSeccionSedes();
     if (section === 'zonas')    verZonas();
 }
@@ -750,10 +760,13 @@ function getEstadoClass(estado) {
     return 'badge-neutral';
 }
 
-async function verRondasHoy() {
+async function verRondasHoy(silencioso = false) {
     const div    = document.getElementById('tabla-reportes');
     const idSede = document.getElementById('filtro-sede-hoy').value;
-    div.innerHTML = '<p class="empty-state">Cargando rondas...</p>';
+    if (!silencioso) {
+        div.innerHTML = '<p class="empty-state">Cargando rondas...</p>';
+    }
+    
     try {
         const url = `${API}/reportes?tipo=hoy${idSede ? '&id_sede=' + idSede : ''}`;
         const res  = await authFetch(url);
@@ -787,7 +800,7 @@ async function verRondasHoy() {
         });
         div.innerHTML = html + '</tbody></table>';
     } catch(e) {
-        div.innerHTML = '<p class="empty-state empty-error">Error al cargar datos.</p>';
+        if (!silencioso) div.innerHTML = '<p class="empty-state empty-error">Error al cargar datos.</p>';
     }
 }
 

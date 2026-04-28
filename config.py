@@ -8,6 +8,13 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle':  280,
+        'pool_size':     5,
+        'max_overflow':  10,
+    }
+
     MAIL_SERVER   = os.environ.get('MAIL_SERVER')
     MAIL_PORT     = int(os.environ.get('MAIL_PORT', 587))
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')

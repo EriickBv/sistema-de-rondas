@@ -12,5 +12,4 @@ def index():
 ruta_admin = os.getenv('RUTA_ADMIN', '/admin')
 @web_bp.route(ruta_admin)
 def admin():
-    lista_zonas = PuntoControl.query.all()
-    return render_template('admin.html', zonas=lista_zonas)
+    return render_template('admin.html')

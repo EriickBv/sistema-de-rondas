@@ -114,10 +114,15 @@
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Guardias Registrados</h3>
-                        <button class="btn btn-ghost btn-sm" onclick="verGuardias()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                            Actualizar
-                        </button>
+                        <div class="card-header-actions">
+                            <select id="filtro-sede-guardias" class="input select select-sm" onchange="verGuardias()" style="width: auto; min-width: 160px;">
+                                <option value="">Todas las instalaciones</option>
+                            </select>
+                            <button class="btn btn-ghost btn-sm" onclick="verGuardias()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                Actualizar
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body no-pad">
                         <div id="tabla-guardias" class="table-container">
@@ -257,14 +262,22 @@
                     <div class="card-body">
                         <p class="hint" style="margin-bottom:20px;">
                             El sistema envía automáticamente el reporte del día anterior a las 07:00 AM, con un archivo CSV por instalación como adjunto.
+                            Los destinatarios <strong>Globales</strong> reciben un único correo con todos los CSVs; los destinatarios asignados a una instalación específica reciben solo el de su sede.
                         </p>
-                        <div class="inline-form">
-                            <div class="field" style="flex:1;min-width:200px">
-                                <label class="field-label">Agregar Destinatario</label>
+                        <!-- ─── EDICIÓN 1: Formulario con selector de sede ─── -->
+                        <div class="inline-form-grid">
+                            <div class="field">
+                                <label class="field-label">Correo Electrónico</label>
                                 <input type="email" id="email-nuevo" class="input" placeholder="correo@empresa.com"
                                        onkeydown="if(event.key==='Enter') agregarEmail()">
                             </div>
-                            <div class="inline-actions">
+                            <div class="field">
+                                <label class="field-label">Filtrar por Instalación</label>
+                                <select id="email-sede" class="input select">
+                                    <option value="">Global — recibe todas las instalaciones</option>
+                                </select>
+                            </div>
+                            <div class="inline-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
                                 <button class="btn btn-primary" onclick="agregarEmail()">Agregar</button>
                                 <button class="btn btn-secondary" onclick="enviarReporteAhora()">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -317,6 +330,29 @@
 
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
+<!-- ═══════════════ EDICIÓN 2: MODAL DE EMERGENCIAS (POLLING) ═══════════════ -->
+<div id="emergency-overlay" class="emergency-overlay">
+    <div class="emergency-modal">
+        <div class="emergency-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9"  x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <h2>🚨 Alerta de Pánico</h2>
+            <span id="emergency-count" class="count">0</span>
+        </div>
+        <div class="emergency-body">
+            <p class="emergency-intro">Se recibió una solicitud de emergencia. Contacta al guardia y atiende la alerta para silenciar la alarma.</p>
+            <div id="emergency-list" class="emergency-list"></div>
+        </div>
+        <div class="emergency-footer">
+            <span class="polling-hint">Monitoreando cada 5 segundos</span>
+            <button class="btn btn-ghost btn-sm" onclick="silenciarAlarmaTemporalmente()">Silenciar 30 s</button>
+        </div>
+    </div>
+</div>
+
 <script>
 const API = "/api";
 let sedesCache = [];
@@ -332,7 +368,7 @@ async function login() {
     try {
         const res  = await fetch(`${API}/auth/login_admin`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json','ngrok-skip-browser-warning': '69420' },
             body: JSON.stringify({ usuario: u, password: p })
         });
         const data = await res.json();
@@ -363,12 +399,15 @@ async function mostrarDashboard() {
     navigateTo('guardias');
     verGuardias();
     cargarEmails();
+    populateSelect('email-sede', false);   // dropdown de sedes para el form de correos
+    iniciarPollingEmergencias();           // ← arranca el monitoreo del botón de pánico
 }
 
 async function authFetch(url, options = {}) {
     const token = localStorage.getItem('token_admin');
     if (!options.headers) options.headers = {};
     options.headers['Authorization'] = token;
+    options.headers['ngrok-skip-browser-warning'] = '69420';
     const res = await fetch(url, options);
     if (res.status === 401 || res.status === 403) {
         alert('Sesión expirada.');
@@ -429,7 +468,9 @@ function populateSelect(selectId, incluyeTodos = false) {
     const curr = sel.value;
     sel.innerHTML = incluyeTodos
         ? '<option value="">Todas las instalaciones</option>'
-        : '<option value="">Sin instalación asignada</option>';
+        : (selectId === 'email-sede'
+            ? '<option value="">Global — recibe todas las instalaciones</option>'
+            : '<option value="">Sin instalación asignada</option>');
     sedesCache.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.id;
@@ -451,9 +492,10 @@ async function cargarSedes() {
         populateSelect('export-sede', true);
         populateSelect('filtro-sede-qr', true);
         populateSelect('filtro-sede-ver-zonas', true);
+        populateSelect('filtro-sede-guardias', true);
+        populateSelect('email-sede', false);   // ← refrescar también el selector de correos
     } catch(e) { console.error('Error cargando sedes:', e); }
 }
-
 async function abrirImpresionQRs() {
     const idSede = document.getElementById('filtro-sede-qr').value;
     const qs     = idSede ? `?id_sede=${idSede}` : '';
@@ -543,7 +585,7 @@ async function crearGuardia() {
         const data = await res.json();
         showToast(data.message, res.ok ? 'success' : 'error');
         if (res.ok) {
-            ['g-nombre', 'g-rut', 'g-email', 'g-pass'].forEach(id => document.getElementById(id).value = '');
+            ['g-nombre','g-rut','g-email','g-pass'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('g-sede').value = '';
             verGuardias();
         }
@@ -551,44 +593,34 @@ async function crearGuardia() {
 }
 
 async function verGuardias() {
-    const div = document.getElementById('tabla-guardias');
+    const div    = document.getElementById('tabla-guardias');
+    const idSede = document.getElementById('filtro-sede-guardias')?.value || '';
     div.innerHTML = '<p class="empty-state">Cargando...</p>';
     try {
-        const res  = await authFetch(`${API}/reportes?tipo=guardias`);
+        const url  = `${API}/reportes/?tipo=guardias${idSede ? '&id_sede=' + idSede : ''}`;
+        const res  = await authFetch(url);
         const data = await res.json();
-        if (!data.length) { div.innerHTML = '<p class="empty-state">No hay guardias registrados.</p>'; return; }
-
+        if (!data.length) {
+            div.innerHTML = '<p class="empty-state">No hay guardias registrados.</p>';
+            return;
+        }
         let html = `<table><thead><tr>
-            <th>#</th><th>Nombre</th><th>RUT</th><th>Email</th>
-            <th>Instalación</th><th>Estado</th><th class="col-action">Acción</th>
+            <th>#</th><th>Nombre</th><th>RUT</th><th>Email</th><th>Instalación</th><th>Estado</th>
+            <th class="col-action">Acción</th>
         </tr></thead><tbody>`;
-
         data.forEach((g, i) => {
-            let sedeOpts = '<option value="">Sin instalación</option>';
-            sedesCache.forEach(s => {
-                const sel = String(s.id) === String(g.id_sede) ? ' selected' : '';
-                sedeOpts += `<option value="${s.id}"${sel}>${s.nombre}</option>`;
-            });
-
-            const badge = g.Activo
-                ? '<span class="badge badge-green">Activo</span>'
-                : '<span class="badge badge-red">Inactivo</span>';
-
+            const sedeName = sedesCache.find(s => String(s.id) === String(g.id_sede))?.nombre
+                          || '<span class="text-muted">Sin instalación</span>';
             html += `<tr>
                 <td class="text-muted">${i + 1}</td>
                 <td><strong>${g.Nombre}</strong></td>
                 <td class="font-mono">${g.RUT}</td>
-                <td class="text-muted">${g.Email || '—'}</td>
-                <td>
-                    <select class="input select select-inline"
-                        onchange="cambiarSedeGuardia(${g.ID}, this.value)">
-                        ${sedeOpts}
-                    </select>
-                </td>
-                <td>${badge}</td>
+                <td>${g.Email || '—'}</td>
+                <td>${sedeName}</td>
+                <td><span class="badge ${g.Activo ? 'badge-green' : 'badge-red'}">${g.Activo ? 'Activo' : 'Inactivo'}</span></td>
                 <td class="col-action">
                     <button class="btn ${g.Activo ? 'btn-danger' : 'btn-success'} btn-xs"
-                        onclick="cambiarEstadoGuardia(${g.ID})">
+                            onclick="toggleGuardia(${g.ID}, ${g.Activo})">
                         ${g.Activo ? 'Desactivar' : 'Activar'}
                     </button>
                 </td>
@@ -600,46 +632,36 @@ async function verGuardias() {
     }
 }
 
-async function cambiarEstadoGuardia(id) {
+async function toggleGuardia(id, activo) {
+    const accion = activo ? 'desactivar' : 'activar';
+    if (!confirm(`¿${accion.charAt(0).toUpperCase() + accion.slice(1)} este guardia?`)) return;
     try {
-        const res  = await authFetch(`${API}/auth/cambiar_estado_guardia/${id}`, { method: 'PUT' });
+        const res  = await authFetch(`${API}/auth/guardias/${id}/toggle`, { method: 'PUT' });
         const data = await res.json();
         showToast(data.message, res.ok ? 'success' : 'error');
         if (res.ok) verGuardias();
     } catch(e) { showToast('Error de conexión.', 'error'); }
 }
 
-async function cambiarSedeGuardia(id, id_sede) {
-    try {
-        const res  = await authFetch(`${API}/auth/cambiar_sede_guardia/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_sede: id_sede ? parseInt(id_sede) : null })
-        });
-        const data = await res.json();
-        showToast(data.message, res.ok ? 'success' : 'error');
-    } catch(e) { showToast('Error de conexión.', 'error'); }
-}
-
 // ─── ZONAS ────────────────────────────────────────────────────────
 async function crearZona() {
-    const nombre  = document.getElementById('z-nombre').value.trim();
-    const lat     = document.getElementById('z-lat').value;
-    const long    = document.getElementById('z-long').value;
-    const id_sede = document.getElementById('z-sede').value || null;
+    const nombre = document.getElementById('z-nombre').value.trim();
+    const lat    = document.getElementById('z-lat').value;
+    const lng    = document.getElementById('z-long').value;
+    const sede   = document.getElementById('z-sede').value || null;
     if (!nombre) { showToast('El nombre es obligatorio.', 'error'); return; }
     try {
         const res  = await authFetch(`${API}/zonas/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre_zona: nombre, latitud: lat, longitud: long, id_sede })
+            body: JSON.stringify({ nombre_zona: nombre, latitud: parseFloat(lat), longitud: parseFloat(lng), id_sede: sede })
         });
         const data = await res.json();
         showToast(data.message, res.ok ? 'success' : 'error');
         if (res.ok) {
-            ['z-nombre'].forEach(id => document.getElementById(id).value = '');
-            document.getElementById('z-lat').value  = '0.0';
-            document.getElementById('z-long').value = '0.0';
+            document.getElementById('z-nombre').value = '';
+            document.getElementById('z-lat').value    = '0.0';
+            document.getElementById('z-long').value   = '0.0';
             document.getElementById('z-sede').value = '';
             verZonas();
         }
@@ -651,7 +673,7 @@ async function verZonas() {
     const idSede = document.getElementById('filtro-sede-ver-zonas')?.value || '';
     div.innerHTML = '<p class="empty-state">Cargando...</p>';
     try {
-        const url = `${API}/reportes?tipo=puntos${idSede ? '&id_sede=' + idSede : ''}`;
+        const url = `${API}/reportes/?tipo=puntos${idSede ? '&id_sede=' + idSede : ''}`;
         const res  = await authFetch(url);
         const data = await res.json();
         if (!data.length) { div.innerHTML = '<p class="empty-state">No hay zonas registradas.</p>'; return; }
@@ -685,7 +707,8 @@ async function verZonas() {
             const tbody = document.getElementById('zonas-tbody');
             new Sortable(tbody, {
                 animation: 150,
-                ghostClass: 'bg-app',
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
                 onEnd: async function () {
                     const filas = tbody.querySelectorAll('tr');
                     const nuevoOrdenIds = Array.from(filas).map(fila => parseInt(fila.getAttribute('data-id')));
@@ -749,6 +772,7 @@ const ESTADO_CLASSES = {
     'Correcto':    'badge-green',
     'Inicio Ronda': 'badge-green',
     'Tarde':       'badge-yellow',
+    'Omitido':     'badge-orange',
     'Lejos':       'badge-orange',
     'CRITICO':     'badge-red'
 };
@@ -760,48 +784,163 @@ function getEstadoClass(estado) {
     return 'badge-neutral';
 }
 
+// ═══════════════ EDICIÓN 3: verRondasHoy con AGRUPACIÓN POR RONDA ═══════════════
 async function verRondasHoy(silencioso = false) {
     const div    = document.getElementById('tabla-reportes');
     const idSede = document.getElementById('filtro-sede-hoy').value;
-    if (!silencioso) {
-        div.innerHTML = '<p class="empty-state">Cargando rondas...</p>';
-    }
-    
+    if (!silencioso) div.innerHTML = '<p class="empty-state">Cargando línea de tiempo operativa...</p>';
+
     try {
-        const url = `${API}/reportes?tipo=hoy${idSede ? '&id_sede=' + idSede : ''}`;
+        const url  = `${API}/reportes/?tipo=hoy${idSede ? '&id_sede=' + idSede : ''}`;
         const res  = await authFetch(url);
         const data = await res.json();
         if (!data.length) { div.innerHTML = '<p class="empty-state">Sin registros para hoy.</p>'; return; }
 
+        const grupos = new Map();
+        let standaloneCounter = 0;
+
+        data.forEach(r => {
+            let key;
+            if (r.tipo_evento === 'ronda') {
+                key = r.id_ronda ? `ronda_${r.id_ronda}` : `_sin_ronda_${r.Guardia}_${r.Hora.slice(0,10)}`;
+            } else {
+                key = `standalone_${standaloneCounter++}`;
+            }
+
+            if (!grupos.has(key)) {
+                grupos.set(key, {
+                    tipo_grupo: r.tipo_evento === 'ronda' ? 'ronda' : 'standalone',
+                    id_ronda: r.id_ronda,
+                    guardia: r.Guardia,
+                    sede: r.Sede,
+                    registros: []
+                });
+            }
+            grupos.get(key).registros.push(r);
+        });
+
+        const gruposList = [];
+        grupos.forEach(g => {
+            const cron = [...g.registros].reverse();
+            g.inicio = cron[0].Hora;
+            
+            if (g.tipo_grupo === 'ronda') {
+                g.fin = cron[cron.length - 1].Hora;
+                g.totalRegistros = cron.length;
+                const cerradosConPendientes = cron.filter(r => (r.Observacion || '').includes('OMITIDO AL CIERRE'));
+                const omitidosPuntuales = cron.filter(r => (r.Observacion || '').includes('OMITIDO:') && !(r.Observacion || '').includes('OMITIDO AL CIERRE'));
+                g.incompleta = cerradosConPendientes.length > 0;
+                g.omitidos = omitidosPuntuales.length;
+                g.cerradaConPendientes = cerradosConPendientes.length;
+            }
+            gruposList.push(g);
+        });
+
+        gruposList.sort((a, b) => new Date(b.inicio) - new Date(a.inicio));
+
         let html = `<table><thead><tr>
-            <th>Guardia</th><th>Punto</th><th>Hora</th>
+            <th>Guardia / Evento</th><th>Instalación</th><th>Punto / Detalle</th><th>Hora</th>
             <th>Distancia</th><th>Estado</th><th>Observación</th>
         </tr></thead><tbody>`;
 
-        data.forEach(r => {
-            const hora = new Date(r.Hora).toLocaleTimeString('es-CL', {
-                hour: '2-digit', minute: '2-digit', second: '2-digit'
-            });
-
-            let obsHtml = r.Observacion || '—';
-            if (obsHtml.includes('[ALERTA:')) {
-                const [nota, alerta] = obsHtml.split('[ALERTA:');
-                obsHtml = `${nota.trim() ? `<em class="text-muted">${nota.trim()}</em><br>` : ''}<span class="text-danger" style="font-size:12px;font-weight:600;">${alerta.replace(']','').trim()}</span>`;
+        gruposList.forEach(g => {
+            if (g.tipo_grupo === 'standalone') {
+                const r = g.registros[0];
+                const hora = new Date(r.Hora).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                
+                if (r.tipo_evento === 'asistencia') {
+                    const isEntrada = r.Punto.includes('Entrada');
+                    html += `<tr class="ronda-standalone-row asis-row">
+                        <td><strong>${r.Guardia}</strong></td>
+                        <td><span class="text-muted">${r.Sede}</span></td>
+                        <td><span class="badge ${isEntrada ? 'badge-blue' : 'badge-purple'}">${r.Punto}</span></td>
+                        <td class="font-mono">${hora}</td>
+                        <td><span class="text-muted">—</span></td>
+                        <td><span class="badge badge-neutral">Asistencia</span></td>
+                        <td class="col-obs">${r.Observacion}</td>
+                    </tr>`;
+                } else if (r.tipo_evento === 'panico') {
+                    html += `<tr class="ronda-standalone-row panico-row">
+                        <td><strong style="color: var(--danger);">${r.Guardia}</strong></td>
+                        <td><span class="text-muted">${r.Sede}</span></td>
+                        <td><span class="badge badge-red">${r.Punto}</span></td>
+                        <td class="font-mono" style="color: var(--danger); font-weight: bold;">${hora}</td>
+                        <td><span class="text-muted">—</span></td>
+                        <td><span class="badge badge-red">CRÍTICO</span></td>
+                        <td class="col-obs"><strong class="text-danger">${r.Observacion}</strong></td>
+                    </tr>`;
+                }
+                return;
             }
 
-            html += `<tr>
-                <td><strong>${r.Guardia}</strong></td>
-                <td>${r.Punto}</td>
-                <td class="font-mono">${hora}</td>
-                <td><span class="badge badge-neutral font-mono">${r.Distancia}</span></td>
-                <td><span class="badge ${getEstadoClass(r.Estado)}">${r.Estado}</span></td>
-                <td class="col-obs">${obsHtml}</td>
+            const claseLateral = g.incompleta ? 'ronda-incomplete' : (g.id_ronda ? 'ronda-completed' : 'ronda-active');
+            const horaInicio = new Date(g.inicio).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+            const horaFin = new Date(g.fin).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+            const dur = durationMin(g.inicio, g.fin);
+
+            html += `<tr class="ronda-group-header ${claseLateral}">
+                <td colspan="7">
+                    <span class="badge badge-ring-start">▶ Inicio de Ronda</span>
+                    <strong style="margin-left:10px;">${g.guardia}</strong>
+                    <span class="ronda-meta">
+                        <span>🏢 ${g.sede}</span>
+                        <span>🕐 ${horaInicio}</span>
+                        ${g.id_ronda ? `<span class="ronda-duration">Ronda #${g.id_ronda}</span>` : ''}
+                        <span class="ronda-duration">${g.totalRegistros} punto(s)</span>
+                        ${dur ? `<span class="ronda-duration">⏱ ${dur}</span>` : ''}
+                    </span>
+                </td>
             </tr>`;
+
+            const cron = [...g.registros].reverse();
+            cron.forEach(r => {
+                const hora = new Date(r.Hora).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                let obsHtml = r.Observacion || '—';
+                if (obsHtml.includes('[ALERTA:')) {
+                    const [nota, alerta] = obsHtml.split('[ALERTA:');
+                    obsHtml = `${nota.trim() ? `<em class="text-muted">${nota.trim()}</em><br>` : ''}<span class="text-danger" style="font-size:12px;font-weight:600;">${alerta.replace(']', '').trim()}</span>`;
+                }
+                html += `<tr>
+                    <td><strong>${r.Guardia}</strong></td>
+                    <td><span class="text-muted">${r.Sede}</span></td>
+                    <td>${r.Punto}</td>
+                    <td class="font-mono">${hora}</td>
+                    <td><span class="badge badge-neutral font-mono">${r.Distancia}</span></td>
+                    <td><span class="badge ${getEstadoClass(r.Estado)}">${r.Estado}</span></td>
+                    <td class="col-obs">${obsHtml}</td>
+                </tr>`;
+            });
+
+            if (g.incompleta) {
+                html += `<tr class="ronda-end-row">
+                    <td colspan="7">
+                        <span class="badge badge-ring-incomplete">⚠ Ronda Incompleta</span>
+                        <span style="margin-left:10px;">${g.cerradaConPendientes} punto(s) omitido(s) al cierre · Cerrada a las ${horaFin}</span>
+                    </td>
+                </tr>`;
+            } else if (g.id_ronda) {
+                html += `<tr class="ronda-end-row">
+                    <td colspan="7">
+                        <span class="badge badge-ring-end">■ Fin de Ronda</span>
+                        <span style="margin-left:10px;">Ronda completada a las ${horaFin}${g.omitidos > 0 ? ` · ${g.omitidos} salto(s) reportado(s)` : ''}</span>
+                    </td>
+                </tr>`;
+            }
         });
+
         div.innerHTML = html + '</tbody></table>';
     } catch(e) {
         if (!silencioso) div.innerHTML = '<p class="empty-state empty-error">Error al cargar datos.</p>';
     }
+}
+
+// Helper: duración entre dos timestamps ISO en formato legible
+function durationMin(isoA, isoB) {
+    const ms = Math.abs(new Date(isoB) - new Date(isoA));
+    const min = Math.round(ms / 60000);
+    if (min < 60) return `${min} min`;
+    const h = Math.floor(min / 60), m = min % 60;
+    return `${h}h ${m}m`;
 }
 
 function abrirModalExport() {
@@ -844,7 +983,7 @@ async function descargarCSV(tipo) {
     } catch(e) { showToast('Error de conexión.', 'error'); }
 }
 
-// ─── CORREOS ──────────────────────────────────────────────────────
+// ═══════════════ EDICIÓN 4a: CORREOS con sede ═══════════════
 async function cargarEmails() {
     const div = document.getElementById('lista-emails');
     try {
@@ -855,12 +994,16 @@ async function cargarEmails() {
             return;
         }
         let html = `<table><thead><tr>
-            <th>#</th><th>Email</th><th class="col-action">Acción</th>
+            <th>#</th><th>Email</th><th>Instalación</th><th class="col-action">Acción</th>
         </tr></thead><tbody>`;
         data.forEach((d, i) => {
+            const sedeLabel = d.id_sede
+                ? `<span class="badge badge-neutral">${d.sede_nombre}</span>`
+                : `<span class="badge badge-green">Global</span>`;
             html += `<tr>
                 <td class="text-muted">${i + 1}</td>
                 <td>${d.email}</td>
+                <td>${sedeLabel}</td>
                 <td class="col-action">
                     <button class="btn btn-danger btn-xs" onclick="eliminarEmail(${d.id})">Eliminar</button>
                 </td>
@@ -873,17 +1016,22 @@ async function cargarEmails() {
 }
 
 async function agregarEmail() {
-    const email = document.getElementById('email-nuevo').value.trim();
+    const email   = document.getElementById('email-nuevo').value.trim();
+    const idSede  = document.getElementById('email-sede').value || null;
     if (!email) return;
     try {
         const res  = await authFetch(`${API}/reportes/destinatarios`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email, id_sede: idSede })
         });
         const data = await res.json();
         showToast(data.message, res.ok ? 'success' : 'error');
-        if (res.ok) { document.getElementById('email-nuevo').value = ''; cargarEmails(); }
+        if (res.ok) {
+            document.getElementById('email-nuevo').value = '';
+            document.getElementById('email-sede').value  = '';
+            cargarEmails();
+        }
     } catch(e) { showToast('Error de conexión.', 'error'); }
 }
 
@@ -944,6 +1092,163 @@ function createToastContainer() {
     container.className = 'toast-container';
     document.body.appendChild(container);
     return container;
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/*  EDICIÓN 4b: CENTRAL DE EMERGENCIAS — Polling + Modal + Sirena      */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+const EMERGENCY_POLL_MS   = 5000;
+const SILENCE_DURATION_MS = 30 * 1000;
+
+let emergencyPollInterval = null;
+let alertasConocidas      = new Set();   // ids de alertas ya vistas
+let audioCtx              = null;
+let oscNodes              = [];
+let silencioHasta         = 0;
+
+function iniciarPollingEmergencias() {
+    if (emergencyPollInterval) clearInterval(emergencyPollInterval);
+    consultarEmergencias();   // dispara una primera vez sin esperar
+    emergencyPollInterval = setInterval(consultarEmergencias, EMERGENCY_POLL_MS);
+}
+
+async function consultarEmergencias() {
+    try {
+        const res  = await authFetch(`${API}/panico/activas`);
+        if (!res || !res.ok) return;
+        const data = await res.json();
+
+        const overlay = document.getElementById('emergency-overlay');
+        const lista   = document.getElementById('emergency-list');
+        const count   = document.getElementById('emergency-count');
+
+        if (data.total === 0) {
+            overlay.classList.remove('visible');
+            detenerSirena();
+            alertasConocidas.clear();
+            return;
+        }
+
+        // Detectar si hay alertas nuevas (no estaban en el set previo)
+        const nuevas = data.alertas.filter(a => !alertasConocidas.has(a.id));
+        // PARCHE A-2 (a): reconstruir el Set solo con IDs vigentes en el
+        // backend. Antes solo se hacían .add() sin remover, y la cola se
+        // mantenía creciendo sin tope durante turnos largos.
+        const idsActuales = new Set(data.alertas.map(a => a.id));
+        alertasConocidas = idsActuales;
+
+        // Actualizar el contenido del modal
+        count.innerText = data.total;
+        lista.innerHTML = data.alertas.map(a => `
+            <div class="emergency-alert" data-id="${a.id}">
+                <div>
+                    <div class="guard">👤 ${a.guardia}</div>
+                    <div class="sede">RUT ${a.rut} · ${a.sede}</div>
+                    <span class="time">⏱ ${a.fecha_hora}</span>
+                </div>
+                <button class="btn-attend" onclick="atenderAlerta(${a.id}, this)">
+                    Atender
+                </button>
+                ${a.lat && a.long ? `
+                <div class="coords">
+                    📍 ${a.lat.toFixed(6)}, ${a.long.toFixed(6)} ·
+                    <a href="https://www.google.com/maps?q=${a.lat},${a.long}" target="_blank" rel="noopener">Abrir en mapa ↗</a>
+                </div>` : ''}
+            </div>`).join('');
+
+        overlay.classList.add('visible');
+
+        // Si hay alguna alerta nueva (y NO estamos silenciados) → tocar sirena
+        if (nuevas.length > 0 && Date.now() > silencioHasta) {
+            tocarSirena();
+        }
+    } catch(e) {
+        console.warn('[Pánico] error de polling:', e);
+    }
+}
+
+async function atenderAlerta(id, btn) {
+    btn.disabled = true; btn.innerText = '...';
+    try {
+        const res = await authFetch(`${API}/panico/${id}/atender`, { method: 'PUT' });
+        if (res && res.ok) {
+            showToast('Alerta atendida correctamente', 'success');
+            consultarEmergencias();   // refrescar inmediatamente
+        } else {
+            const data = res ? await res.json() : {};
+            showToast(data.message || 'Error al atender', 'error');
+            btn.disabled = false; btn.innerText = 'Atender';
+        }
+    } catch(e) {
+        showToast('Error de conexión', 'error');
+        btn.disabled = false; btn.innerText = 'Atender';
+    }
+}
+
+function silenciarAlarmaTemporalmente() {
+    silencioHasta = Date.now() + SILENCE_DURATION_MS;
+    detenerSirena();
+    showToast('Alarma silenciada por 30 segundos', 'success');
+}
+
+/* ─── Sirena con Web Audio API (no requiere archivo MP3 externo) ──── */
+function tocarSirena() {
+    detenerSirena();
+    if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        catch(e) { return; }
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(620, audioCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(880, audioCtx.currentTime + 0.5);
+    osc.frequency.linearRampToValueAtTime(620, audioCtx.currentTime + 1.0);
+    gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+
+    // Repetir el barrido 3 veces (~3 seg total)
+    osc.frequency.setValueAtTime(620, audioCtx.currentTime + 1.0);
+    osc.frequency.linearRampToValueAtTime(880, audioCtx.currentTime + 1.5);
+    osc.frequency.linearRampToValueAtTime(620, audioCtx.currentTime + 2.0);
+    osc.frequency.linearRampToValueAtTime(880, audioCtx.currentTime + 2.5);
+    osc.frequency.linearRampToValueAtTime(620, audioCtx.currentTime + 3.0);
+
+    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3.05);
+    osc.stop(audioCtx.currentTime + 3.1);
+
+    const ref = { osc, gain };
+    oscNodes.push(ref);
+
+    // PARCHE A-2 (b): cuando el oscillator termina naturalmente, lo
+    // DESCONECTAMOS del audio graph y removemos del array. Antes los
+    // nodos quedaban referenciados por audioCtx.destination y por el
+    // array, acumulándose durante turnos de 8h con muchas alertas
+    // (cientos de MB en Chrome).
+    osc.onended = () => {
+        try { osc.disconnect(); gain.disconnect(); } catch(e) {}
+        const i = oscNodes.indexOf(ref);
+        if (i !== -1) oscNodes.splice(i, 1);
+    };
+}
+
+function detenerSirena() {
+    oscNodes.forEach(({ osc, gain }) => {
+        try {
+            gain.gain.cancelScheduledValues(audioCtx.currentTime);
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.05);
+            // PARCHE A-2 (b): desconectar explícitamente del graph
+            osc.disconnect();
+            gain.disconnect();
+        } catch(e) {}
+    });
+    oscNodes = [];
 }
 </script>
 </body>

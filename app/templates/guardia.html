@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Ronda Segura Pro</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,322 +11,659 @@
 </head>
 <body>
 
-    <div id="screen-login" class="screen active">
-        <div class="login-header">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <h2>Identificación</h2>
-            <p>Sistema Seguro de Rondas</p>
-        </div>
+<!-- ═══════════════════ SCREEN: LOGIN ═══════════════════ -->
+<div id="screen-login" class="screen active">
+    <div class="login-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <h2>Identificación</h2>
+        <p>Sistema Seguro de Rondas</p>
+    </div>
+    <div class="field">
+        <label>RUT</label>
+        <input type="text" id="rut-login" class="input" placeholder="12.345.678-9"
+               oninput="formatearRut(this)" maxlength="12" autocomplete="username">
+    </div>
+    <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="pass-login" class="input" placeholder="••••••••"
+               autocomplete="current-password" onkeydown="if(event.key==='Enter') hacerLogin()">
+    </div>
+    <button class="btn btn-primary" onclick="hacerLogin()">Ingresar al Sistema</button>
+    <p id="error-login" class="error-msg"></p>
+</div>
 
-        <div class="field">
-            <label>RUT</label>
-            <input type="text" id="rut-login" class="input" placeholder="12.345.678-9" 
-                   oninput="formatearRut(this)" maxlength="12" autocomplete="username">
+<!-- ═══════════════════ SCREEN: APP ═══════════════════ -->
+<div id="screen-app" class="screen">
+    <header class="app-header">
+        <div class="guard-info">
+            <span class="label">Guardia de Turno</span>
+            <span id="nombre-guardia" class="value">Cargando...</span>
         </div>
-        <div class="field">
-            <label>Contraseña</label>
-            <input type="password" id="pass-login" class="input" placeholder="••••••••" 
-                   autocomplete="current-password" onkeydown="if(event.key==='Enter') hacerLogin()">
-        </div>
+        <button class="btn-icon" onclick="cerrarSesion()" title="Cerrar Sesión">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+    </header>
 
-        <button class="btn btn-primary" onclick="hacerLogin()">Ingresar al Sistema</button>
-        <p id="error-login" class="error-msg"></p>
+    <!-- 1. ASISTENCIA — Drawer plegable -->
+    <div id="attendance-card" class="attendance-card">
+        <button class="attendance-toggle" onclick="toggleAsistencia()">
+            <div class="attendance-status">
+                <span id="status-dot" class="status-dot"></span>
+                <div class="attendance-label">
+                    <div id="asistencia-primary" class="primary">Fuera de turno</div>
+                    <div id="asistencia-secondary" class="secondary">Marca tu entrada para comenzar</div>
+                </div>
+            </div>
+            <svg class="attendance-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="attendance-drawer">
+            <div class="attendance-actions">
+                <button id="btn-entrada" class="btn-shift enter" onclick="marcarAsistencia('entrada')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    Iniciar Turno
+                </button>
+                <button id="btn-salida" class="btn-shift exit" onclick="marcarAsistencia('salida')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Fin de Turno
+                </button>
+            </div>
+        </div>
     </div>
 
-    <div id="screen-app" class="screen">
-        <header class="app-header">
-            <div class="guard-info">
-                <span class="label">Guardia de Turno</span>
-                <span id="nombre-guardia" class="value">Cargando...</span>
+    <!-- 2. RONDA + CHECKLIST -->
+    <div id="round-card" class="round-card">
+        <div id="round-empty" class="empty-round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <p>No tienes una ronda activa.<br>Pulsa "Iniciar Ronda" para comenzar.</p>
+        </div>
+        <div id="round-active" style="display:none">
+            <div class="round-header">
+                <span class="round-title">Progreso de la Ronda</span>
+                <span class="round-progress-text">
+                    <span id="progress-done">0</span><span class="total"> / <span id="progress-total">0</span></span>
+                </span>
             </div>
-            <button class="btn-icon" onclick="cerrarSesion()" title="Cerrar Sesión">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+            <div id="checklist" class="checklist"></div>
+        </div>
+    </div>
+
+    <!-- 3. STATUS LOG -->
+    <div id="status" class="log-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span id="status-msg">Listo para iniciar la ronda.</span>
+    </div>
+
+    <!-- 4. SCANNER -->
+    <div id="reader-container" class="reader-container" style="display:none">
+        <div id="reader"></div>
+    </div>
+
+    <!-- 5. ACCIONES -->
+    <div class="action-buttons">
+        <button id="btn-iniciar" class="btn btn-primary" onclick="iniciarRonda()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Iniciar Ronda
+        </button>
+        <button id="btn-scan" class="btn btn-scan" onclick="iniciarScanner()" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h4v4H4zM16 4h4v4h-4zM4 16h4v4H4zM12 12h.01"/><path d="M3 3h18v18H3z"/></svg>
+            Escanear Punto
+        </button>
+        <div id="action-secondary" class="btn-row" style="display:none">
+            <button id="btn-skip" class="btn btn-outline" onclick="abrirModalSaltar()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+                Saltar Punto
             </button>
-        </header>
-        <div class="target-card">
-            <div class="target-label">Siguiente Punto:</div>
-            <div id="objetivo" class="target-value">A la espera del primer escaneo...</div>
-        </div>
-        <div id="status" class="log-box">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            <span>Listo para iniciar la ronda.</span>
-        </div>
-
-        <div id="reader-container" class="reader-container" style="display:none">
-            <div id="reader"></div>
-        </div>
-
-        <div class="action-buttons">
-            <button id="btn-scan" class="btn btn-scan" onclick="iniciarScanner()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h4v4H4zM16 4h4v4h-4zM4 16h4v4H4zM12 12h.01"/><path d="M3 3h18v18H3z"/></svg>
-                Escanear Punto
-            </button>
-            <button id="btn-skip" class="btn btn-outline" onclick="mostrarModalSaltar()">
-                Saltar este punto
+            <button id="btn-finalizar" class="btn btn-ghost" onclick="finalizarRonda()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                Finalizar
             </button>
         </div>
     </div>
 
-    <div id="modal-observacion" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header success-header">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                <h3>Punto Detectado</h3>
-            </div>
-            <div class="modal-body">
-                <label>¿Hay alguna novedad? (Opcional)</label>
-                <textarea id="txt-observacion" class="input textarea" placeholder="Ej: Luz apagada, puerta forzada..."></textarea>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" onclick="confirmarEnvio()">Confirmar Reporte</button>
-                <button class="btn btn-ghost" onclick="cancelarEnvio()">Cancelar</button>
-            </div>
+    <!-- 6. FAB PÁNICO -->
+    <button id="panic-fab" class="panic-fab" aria-label="Botón de Pánico"
+            onpointerdown="iniciarHoldPanico(event)"
+            onpointerup="cancelarHoldPanico()"
+            onpointerleave="cancelarHoldPanico()"
+            onpointercancel="cancelarHoldPanico()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9"  x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+    </button>
+    <div id="panic-hint" class="panic-hint">Mantén presionado para emergencia</div>
+</div>
+
+<!-- ═══════════════════ MODAL: Observación al escanear ═══════════════════ -->
+<div id="modal-observacion" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header success-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <h3>Punto Detectado</h3>
+        </div>
+        <div class="modal-body">
+            <label>¿Hay alguna novedad? (Opcional)</label>
+            <textarea id="txt-observacion" class="input textarea" placeholder="Ej: Luz apagada, puerta forzada..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="confirmarEnvio()">Confirmar Reporte</button>
+            <button class="btn btn-ghost" onclick="cancelarEnvio()">Cancelar</button>
         </div>
     </div>
+</div>
 
-    <div id="modal-saltar" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header warning-header">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <h3>Saltar Punto</h3>
-            </div>
-            <div class="modal-body">
-                <label>Describe el motivo obligatorio:</label>
-                <textarea id="txt-motivo-salto" class="input textarea" placeholder="Ej: Puerta con candado, pasillo bloqueado..."></textarea>
-            </div>
-            <div class="modal-footer">
-                <button id="btn-confirm-skip" class="btn btn-warning" onclick="confirmarSalto(event)">Reportar Salto</button>
-                <button class="btn btn-ghost" onclick="cerrarModalSaltar()">Cancelar</button>
-            </div>
+<!-- ═══════════════════ MODAL: Saltar Punto (selector + motivo) ═══════════════════ -->
+<div id="modal-saltar" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header warning-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <h3>Saltar un Punto</h3>
+        </div>
+        <div class="modal-body">
+            <label>Elige qué punto deseas omitir:</label>
+            <div id="skip-list" class="skip-list"></div>
+            <label>Motivo obligatorio:</label>
+            <textarea id="txt-motivo-salto" class="input textarea"
+                      placeholder="Ej: Puerta con candado, pasillo bloqueado..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button id="btn-confirm-skip" class="btn btn-warning" onclick="confirmarSalto()">Reportar Salto</button>
+            <button class="btn btn-ghost" onclick="cerrarModalSaltar()">Cancelar</button>
         </div>
     </div>
+</div>
 
-    <script>
-        const API_URL = "/api";
-        let scanner = null;
-        let QR_TEMPORAL = null;
+<!-- ═══════════════════ MODAL: Finalizar con Pendientes ═══════════════════ -->
+<div id="modal-finalizar" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header warning-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <h3>Ronda con Puntos Pendientes</h3>
+        </div>
+        <div class="modal-body">
+            <p>Aún tienes puntos sin completar. Si finalizas ahora, se registrarán como omitidos con la justificación que ingreses.</p>
+            <div class="pending-list">
+                <div class="pending-list-title">Quedarán sin escanear</div>
+                <ul id="pending-list"></ul>
+            </div>
+            <label>Justificación obligatoria:</label>
+            <textarea id="txt-justificacion" class="input textarea"
+                      placeholder="Ej: Se cortó el turno por emergencia, zona clausurada por obras..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button id="btn-confirm-finalizar" class="btn btn-danger" onclick="confirmarFinalizar()">
+                Cerrar Ronda con Pendientes
+            </button>
+            <button class="btn btn-ghost" onclick="cerrarModalFinalizar()">Seguir en Ronda</button>
+        </div>
+    </div>
+</div>
 
-        // --- INICIO Y AUTH ---
+<script>
+/* ══════════════════════════════════════════════════════════════════════ */
+/*   APP GUARDIA — LÓGICA COMPLETA                                        */
+/* ══════════════════════════════════════════════════════════════════════ */
+const API_URL = "/api";
+const PANIC_HOLD_MS = 3500;   // 2 segundo para activar pánico
 
-        if (localStorage.getItem('token_guardia')) verificarEstadoCuenta();
+let scanner = null;
+let QR_TEMPORAL = null;
+let currentChecklist = [];
+let holdTimer = null;
+let holdRAF   = null;
+let skipSelectedId = null;
+let accionPendienteAsistencia = null;
 
-        async function verificarEstadoCuenta() {
-            try {
-                const res = await authFetch(`${API_URL}/auth/validar_token`);
-                if (res && res.ok) {
-                    configurarInterfaz(localStorage.getItem('nombre_guardia'));
-                }
-            } catch (e) { cerrarSesion(); }
+/* ─── INICIO Y AUTH ─────────────────────────────────────────────── */
+if (localStorage.getItem('token_guardia')) verificarEstadoCuenta();
+
+async function verificarEstadoCuenta() {
+    try {
+        const res = await authFetch(`${API_URL}/auth/validar_token`);
+        if (res && res.ok) await configurarInterfaz(localStorage.getItem('nombre_guardia'));
+    } catch (e) {
+        configurarInterfaz(localStorage.getItem('nombre_guardia'));
+    }
+}
+
+async function configurarInterfaz(nombre) {
+    document.getElementById('nombre-guardia').innerText = nombre || '—';
+    mostrarPantalla('screen-app');
+    cargarEstadoAsistencia();
+    cargarEstadoRonda();
+}
+
+function mostrarPantalla(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+async function authFetch(url, options = {}) {
+    const token = localStorage.getItem('token_guardia');
+    if (!options.headers) options.headers = {};
+    options.headers['Authorization'] = token;
+    options.headers['ngrok-skip-browser-warning'] = '69420';
+    const res = await fetch(url, options);
+    if (res.status === 401) { alert("Sesión expirada. Ingresa nuevamente."); cerrarSesion(); return null; }
+    return res;
+}
+
+/* ─── LOGIN ─────────────────────────────────────────────────────── */
+function formatearRut(input) {
+    let actual = input.value.replace(/^0+/, "");
+    if (actual.length > 1) {
+        let clean = actual.replace(/\./g, "").replace(/-/g, "");
+        let body = clean.slice(0, -1), dv = clean.slice(-1);
+        input.value = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + dv;
+    }
+}
+
+async function hacerLogin() {
+    const rut = document.getElementById('rut-login').value;
+    const password = document.getElementById('pass-login').value;
+    if (!rut || !password) { mostrarErrorLogin("Completa RUT y Contraseña."); return; }
+    try {
+        const res = await fetch(`${API_URL}/auth/login_guardia`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json','ngrok-skip-browser-warning': '69420' },
+            body: JSON.stringify({ rut, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            localStorage.setItem('token_guardia', data.token);
+            localStorage.setItem('nombre_guardia', data.nombre);
+            await configurarInterfaz(data.nombre);
+            document.getElementById('rut-login').value  = '';
+            document.getElementById('pass-login').value = '';
+            document.getElementById('error-login').style.display = 'none';
+        } else { mostrarErrorLogin(data.message); }
+    } catch (e) { mostrarErrorLogin("Error de conexión."); }
+}
+
+function mostrarErrorLogin(msg) {
+    const err = document.getElementById('error-login');
+    err.innerText = msg; err.style.display = 'block';
+}
+
+function cerrarSesion() {
+    localStorage.removeItem('token_guardia');
+    localStorage.removeItem('nombre_guardia');
+    mostrarPantalla('screen-login');
+    if (scanner) { try { scanner.clear(); } catch(e){} scanner = null; }
+    resetUIDespuesDeEscanear();
+}
+
+/* ─── ASISTENCIA ─────────────────────────────────────────────────── */
+function toggleAsistencia() {
+    document.getElementById('attendance-card').classList.toggle('open');
+}
+
+async function cargarEstadoAsistencia() {
+    try {
+        const res = await authFetch(`${API_URL}/asistencia/estado`);
+        if (!res || !res.ok) return;
+        renderAsistencia(await res.json());
+    } catch (e) {}
+}
+
+function renderAsistencia(data) {
+    const dot  = document.getElementById('status-dot');
+    const prim = document.getElementById('asistencia-primary');
+    const sec  = document.getElementById('asistencia-secondary');
+    const bIn  = document.getElementById('btn-entrada');
+    const bOut = document.getElementById('btn-salida');
+
+    if (data.en_turno) {
+        dot.classList.add('active');
+        prim.innerText = 'En turno';
+        sec.innerText  = `Entrada registrada a las ${data.ultima_hora}`;
+        bIn.disabled = true; bOut.disabled = false;
+    } else {
+        dot.classList.remove('active');
+        if (data.ultimo_tipo === 'salida') {
+            prim.innerText = 'Turno finalizado';
+            sec.innerText  = `Última salida: ${data.ultima_hora}`;
+        } else {
+            prim.innerText = 'Fuera de turno';
+            sec.innerText  = 'Marca tu entrada para comenzar';
         }
+        bIn.disabled = false;
+        bOut.disabled = data.total_hoy === 0;
+    }
+}
 
-        function configurarInterfaz(nombre) {
-            document.getElementById('nombre-guardia').innerText = nombre;
-            mostrarPantalla('screen-app');
+function marcarAsistencia(tipo) {
+    accionPendienteAsistencia = tipo; // Guardamos si es entrada o salida
+    document.getElementById('attendance-card').classList.remove('open'); // Cerramos el drawer
+    iniciarScanner(); // Abrimos la cámara mágicamente
+}
+
+/* ─── RONDA ─────────────────────────────────────────────────────── */
+async function cargarEstadoRonda() {
+    try {
+        const res = await authFetch(`${API_URL}/rondas/estado`);
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        if (data.ronda_activa) {
+            renderChecklist(data.checklist, data.progreso);
+            modoRondaActiva(true);
+        } else {
+            modoRondaActiva(false);
         }
+    } catch (e) { modoRondaActiva(false); }
+}
 
-        function mostrarPantalla(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+function modoRondaActiva(activa) {
+    document.getElementById('round-empty').style.display       = activa ? 'none' : 'block';
+    document.getElementById('round-active').style.display      = activa ? 'block' : 'none';
+    document.getElementById('btn-iniciar').style.display       = activa ? 'none' : 'flex';
+    document.getElementById('btn-scan').style.display          = activa ? 'flex' : 'none';
+    document.getElementById('action-secondary').style.display  = activa ? 'grid' : 'none';
+}
+
+async function iniciarRonda() {
+    const btn = document.getElementById('btn-iniciar');
+    btn.disabled = true;
+    setStatus('loading', 'Abriendo ronda...');
+    try {
+        const res  = await authFetch(`${API_URL}/rondas/iniciar`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            renderChecklist(data.checklist, data.progreso);
+            modoRondaActiva(true);
+            setStatus('success', data.message);
+        } else { setStatus('error', data.message); }
+    } catch (e) { setStatus('error', 'Error de conexión al iniciar ronda.'); }
+    finally { btn.disabled = false; }
+}
+
+function renderChecklist(checklist, progreso) {
+    currentChecklist = checklist || [];
+    const container = document.getElementById('checklist');
+    container.innerHTML = '';
+    currentChecklist.forEach(p => {
+        const state = p.completado ? 'done' : 'pending';
+        const item = document.createElement('div');
+        item.className = `check-item ${state}`;
+        item.innerHTML = `
+            <span class="check-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <span class="check-text">${p.nombre}</span>`;
+        container.appendChild(item);
+    });
+    document.getElementById('progress-done').innerText  = progreso.completados;
+    document.getElementById('progress-total').innerText = progreso.total;
+    const pct = progreso.total ? (progreso.completados / progreso.total * 100) : 0;
+    document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+/* ─── SCANNER ───────────────────────────────────────────────────── */
+function resetUIDespuesDeEscanear() {
+    document.getElementById('btn-scan').style.display          = currentChecklist.length ? 'flex' : 'none';
+    document.getElementById('action-secondary').style.display  = currentChecklist.length ? 'grid' : 'none';
+    document.getElementById('reader-container').style.display  = 'none';
+}
+
+function iniciarScanner() {
+    document.getElementById('btn-scan').style.display          = 'none';
+    document.getElementById('action-secondary').style.display  = 'none';
+    document.getElementById('reader-container').style.display  = 'block';
+    if (!scanner) scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+    scanner.render(onScan, () => {});
+}
+
+function onScan(qrCode) {
+    try { scanner.clear(); } catch(e){}
+    resetUIDespuesDeEscanear();
+    if (accionPendienteAsistencia) {
+        procesarAsistenciaQR(qrCode, accionPendienteAsistencia);
+    } else {
+        QR_TEMPORAL = qrCode;
+        document.getElementById('txt-observacion').value = "";
+        document.getElementById('modal-observacion').classList.add('visible');
+    }
+}
+function procesarAsistenciaQR(qrCode, tipo) {
+    setStatus('loading', 'Validando QR y ubicación...');
+    const enviar = (lat = null, lon = null) => authFetch(`${API_URL}/asistencia/${tipo}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token_qr: qrCode, lat, long: lon })
+    }).then(r => r && r.json()).then(data => {
+        if (data && data.status === 'success') {
+            setStatus('success', data.message);
+            cargarEstadoAsistencia();
+        } else if (data) {
+            setStatus('error', data.message || 'Error al registrar.');
         }
+    }).catch(() => setStatus('error', 'Error de conexión.')).finally(() => {
+        accionPendienteAsistencia = null;
+    });
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            pos => enviar(pos.coords.latitude, pos.coords.longitude),
+            ()  => enviar(),
+            { enableHighAccuracy: true, timeout: 4000 }
+        );
+    } else { enviar(); }
+}
 
-        async function authFetch(url, options = {}) {
-            const token = localStorage.getItem('token_guardia');
-            if (!options.headers) options.headers = {};
-            options.headers['Authorization'] = token;
-            const res = await fetch(url, options);
-            if (res.status === 401) {
-                alert("Sesión expirada. Ingresa nuevamente.");
-                cerrarSesion();
-                return null;
-            }
-            return res;
+function cancelarEnvio() {
+    document.getElementById('modal-observacion').classList.remove('visible');
+    QR_TEMPORAL = null;
+}
+
+function confirmarEnvio() {
+    const obs = document.getElementById('txt-observacion').value;
+    document.getElementById('modal-observacion').classList.remove('visible');
+    setStatus('loading', 'Validando ubicación GPS...');
+    if (!navigator.geolocation) { setStatus('error', 'Tu navegador no soporta GPS.'); return; }
+    navigator.geolocation.getCurrentPosition(
+        pos => enviarScanAlServidor(QR_TEMPORAL, pos.coords.latitude, pos.coords.longitude, obs),
+        ()  => setStatus('error', 'Debes permitir el acceso al GPS.'),
+        { enableHighAccuracy: true }
+    );
+}
+
+async function enviarScanAlServidor(tokenQr, lat, long, obs) {
+    try {
+        const res = await authFetch(`${API_URL}/rondas/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token_qr: tokenQr, lat, long, observacion: obs })
+        });
+        if (!res) return;
+        const data = await res.json();
+        procesarRespuestaRonda(res.ok, data);
+    } catch (e) { setStatus('error', 'Error de conexión al enviar datos.'); }
+}
+
+/* ─── SALTAR PUNTO ───────────────────────────────────────────────── */
+function abrirModalSaltar() {
+    skipSelectedId = null;
+    const pendientes = currentChecklist.filter(p => !p.completado);
+    const lista = document.getElementById('skip-list');
+    if (!pendientes.length) {
+        lista.innerHTML = '<p style="padding:14px;color:var(--text-muted);text-align:center;font-size:0.9rem;">No hay puntos pendientes para saltar.</p>';
+    } else {
+        lista.innerHTML = '';
+        pendientes.forEach(p => {
+            const btn = document.createElement('button');
+            btn.className = 'skip-option'; btn.type = 'button';
+            btn.dataset.id = p.id_punto;
+            btn.innerHTML = `<span class="skip-option-radio"></span><span>${p.nombre}</span>`;
+            btn.onclick = () => seleccionarPuntoASaltar(btn, p.id_punto);
+            lista.appendChild(btn);
+        });
+    }
+    document.getElementById('txt-motivo-salto').value = '';
+    document.getElementById('modal-saltar').classList.add('visible');
+}
+
+function seleccionarPuntoASaltar(btn, id) {
+    document.querySelectorAll('.skip-option').forEach(el => el.classList.remove('selected'));
+    btn.classList.add('selected');
+    skipSelectedId = id;
+}
+
+function cerrarModalSaltar() {
+    document.getElementById('modal-saltar').classList.remove('visible');
+}
+
+async function confirmarSalto() {
+    const motivo = document.getElementById('txt-motivo-salto').value.trim();
+    if (!skipSelectedId) { alert("Selecciona qué punto quieres saltar."); return; }
+    if (!motivo)         { alert("Describe el motivo."); return; }
+    const btn = document.getElementById('btn-confirm-skip');
+    const txtOriginal = btn.innerText;
+    btn.innerText = "Enviando..."; btn.disabled = true;
+    try {
+        const res = await authFetch(`${API_URL}/rondas/saltar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ motivo, id_punto: skipSelectedId })
+        });
+        const data = await res.json();
+        cerrarModalSaltar();
+        procesarRespuestaRonda(res.ok, data);
+    } catch (err) { setStatus('error', 'Error de conexión al reportar salto.'); }
+    finally { btn.innerText = txtOriginal; btn.disabled = false; }
+}
+
+/* ─── FINALIZAR RONDA ────────────────────────────────────────────── */
+async function finalizarRonda() {
+    const btn = document.getElementById('btn-finalizar');
+    btn.disabled = true;
+    setStatus('loading', 'Cerrando ronda...');
+    try {
+        const res = await authFetch(`${API_URL}/rondas/finalizar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (data.status === 'pendientes') {
+            abrirModalFinalizar(data.puntos_pendientes || []);
+        } else if (data.status === 'success') {
+            setStatus('success', data.message);
+            modoRondaActiva(false); currentChecklist = [];
+        } else {
+            setStatus('error', data.message || 'No se pudo finalizar la ronda.');
         }
+    } catch (e) { setStatus('error', 'Error de conexión al finalizar.'); }
+    finally { btn.disabled = false; }
+}
 
-        // --- LOGIN ---
+function abrirModalFinalizar(pendientes) {
+    const ul = document.getElementById('pending-list');
+    ul.innerHTML = '';
+    pendientes.forEach(nombre => {
+        const li = document.createElement('li');
+        li.innerText = nombre;
+        ul.appendChild(li);
+    });
+    document.getElementById('txt-justificacion').value = '';
+    document.getElementById('modal-finalizar').classList.add('visible');
+}
 
-        function formatearRut(input) {
-            let actual = input.value.replace(/^0+/, "");
-            if (actual.length > 1) {
-                let clean = actual.replace(/\./g, "").replace(/-/g, "");
-                let body = clean.slice(0, -1);
-                let dv = clean.slice(-1);
-                input.value = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + dv;
-            }
-        }
+function cerrarModalFinalizar() {
+    document.getElementById('modal-finalizar').classList.remove('visible');
+}
 
-        async function hacerLogin() {
-            const rut = document.getElementById('rut-login').value;
-            const password = document.getElementById('pass-login').value;
-            const err = document.getElementById('error-login');
-            
-            if (!rut || !password) {
-                mostrarErrorLogin("Completa RUT y Contraseña.");
-                return;
-            }
+async function confirmarFinalizar() {
+    const justificacion = document.getElementById('txt-justificacion').value.trim();
+    if (!justificacion) { alert("La justificación es obligatoria para cerrar con pendientes."); return; }
+    const btn = document.getElementById('btn-confirm-finalizar');
+    const txt = btn.innerText;
+    btn.disabled = true; btn.innerText = 'Cerrando...';
+    try {
+        const res = await authFetch(`${API_URL}/rondas/finalizar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ justificacion })
+        });
+        const data = await res.json();
+        cerrarModalFinalizar();
+        if (res.ok && data.status === 'success') {
+            setStatus('warning', data.message + ' (Se registraron los pendientes como omitidos)');
+            modoRondaActiva(false); currentChecklist = [];
+        } else { setStatus('error', data.message || 'No se pudo cerrar la ronda.'); }
+    } catch (e) { setStatus('error', 'Error de conexión.'); }
+    finally { btn.disabled = false; btn.innerText = txt; }
+}
 
-            try {
-                const res = await fetch(`${API_URL}/auth/login_guardia`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ rut, password })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    localStorage.setItem('token_guardia', data.token);
-                    localStorage.setItem('nombre_guardia', data.nombre);
-                    configurarInterfaz(data.nombre);
-                    // Limpieza de seguridad
-                    document.getElementById('rut-login').value = '';
-                    document.getElementById('pass-login').value = '';
-                    err.style.display = 'none';
-                } else {
-                    mostrarErrorLogin(data.message);
-                }
-            } catch (e) {
-                mostrarErrorLogin("Error de conexión.");
-            }
-        }
+/* ─── PÁNICO: hold-to-trigger ────────────────────────────────────── */
+function iniciarHoldPanico(e) {
+    e.preventDefault();
+    const fab  = document.getElementById('panic-fab');
+    const hint = document.getElementById('panic-hint');
+    fab.classList.add('holding');
+    hint.classList.add('visible');
 
-        function mostrarErrorLogin(msg) {
-            const err = document.getElementById('error-login');
-            err.innerText = msg;
-            err.style.display = 'block';
-        }
+    const tInicio = performance.now();
+    const tick = () => {
+        const progreso = Math.min((performance.now() - tInicio) / PANIC_HOLD_MS, 1);
+        fab.style.setProperty('--hold-progress', (progreso * 360) + 'deg');
+        if (progreso < 1) holdRAF = requestAnimationFrame(tick);
+    };
+    holdRAF = requestAnimationFrame(tick);
 
-        function cerrarSesion() {
-            localStorage.removeItem('token_guardia');
-            localStorage.removeItem('nombre_guardia');
-            mostrarPantalla('screen-login');
-            if (scanner) scanner.clear();
-            resetUIDespuesDeEscanear();
-        }
+    holdTimer = setTimeout(() => { dispararPanico(); cancelarHoldPanico(); }, PANIC_HOLD_MS);
+}
 
-        // --- SCANNER Y LÓGICA DE RONDAS ---
+function cancelarHoldPanico() {
+    const fab  = document.getElementById('panic-fab');
+    const hint = document.getElementById('panic-hint');
+    fab.classList.remove('holding');
+    hint.classList.remove('visible');
+    fab.style.setProperty('--hold-progress', '0deg');
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    if (holdRAF)   { cancelAnimationFrame(holdRAF); holdRAF = null; }
+}
 
-        function resetUIDespuesDeEscanear() {
-            document.getElementById('btn-scan').style.display = 'flex';
-            document.getElementById('btn-skip').style.display = 'flex';
-            document.getElementById('reader-container').style.display = 'none';
-        }
+async function dispararPanico() {
+    if (navigator.vibrate) try { navigator.vibrate([120, 40, 120, 40, 200]); } catch(e){}
+    setStatus('loading', '🚨 Enviando alerta de pánico...');
+    const enviar = (lat = null, lon = null) => authFetch(`${API_URL}/panico/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, long: lon })
+    }).then(r => r && r.json()).then(data => {
+        if (data && data.status === 'success') setStatus('error', data.message);
+        else setStatus('error', 'Alerta enviada. Manténgase a salvo.');
+    }).catch(() => setStatus('error', 'No hubo red. La alerta se reintentará al reconectar.'));
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            pos => enviar(pos.coords.latitude, pos.coords.longitude),
+            ()  => enviar(),
+            { enableHighAccuracy: true, timeout: 3000 }
+        );
+    } else { enviar(); }
+}
 
-        function iniciarScanner() {
-            document.getElementById('btn-scan').style.display = 'none';
-            document.getElementById('btn-skip').style.display = 'none';
-            document.getElementById('reader-container').style.display = 'block';
+/* ─── UTILIDADES UI ──────────────────────────────────────────────── */
+function procesarRespuestaRonda(exito, data) {
+    if (exito) {
+        const tipo = data.status === 'warning' ? 'warning' : 'success';
+        setStatus(tipo, data.message);
+        if (data.checklist && data.progreso) renderChecklist(data.checklist, data.progreso);
+    } else { setStatus('error', data.message); }
+}
 
-            if (!scanner) scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
-            scanner.render(onScan, () => {}); 
-        }
-
-        function onScan(qrCode) {
-            scanner.clear();
-            resetUIDespuesDeEscanear();
-            QR_TEMPORAL = qrCode;
-            document.getElementById('txt-observacion').value = "";
-            document.getElementById('modal-observacion').style.display = 'flex';
-        }
-
-        function cancelarEnvio() {
-            document.getElementById('modal-observacion').style.display = 'none';
-            QR_TEMPORAL = null;
-        }
-
-        function confirmarEnvio() {
-            const obs = document.getElementById('txt-observacion').value;
-            document.getElementById('modal-observacion').style.display = 'none';
-            
-            setStatus('loading', 'Validando ubicación GPS...');
-
-            if (!navigator.geolocation) {
-                setStatus('error', 'Tu navegador no soporta GPS.');
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                pos => enviarAlServidor(QR_TEMPORAL, pos.coords.latitude, pos.coords.longitude, obs),
-                () => setStatus('error', 'Debes permitir el acceso al GPS.'),
-                { enableHighAccuracy: true }
-            );
-        }
-
-        async function enviarAlServidor(tokenQr, lat, long, obs) {
-            try {
-                const res = await authFetch(`${API_URL}/rondas/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token_qr: tokenQr, lat, long, observacion: obs })
-                });
-                if (!res) return;
-                const data = await res.json();
-                procesarRespuestaRonda(res.ok, data);
-            } catch (e) {
-                setStatus('error', 'Error de conexión al enviar datos.');
-            }
-        }
-
-        // --- SALTOS DE PUNTO ---
-
-        function mostrarModalSaltar() {
-            document.getElementById('modal-saltar').style.display = 'flex';
-            const area = document.getElementById('txt-motivo-salto');
-            area.value = '';
-            setTimeout(() => area.focus(), 100);
-        }
-
-        function cerrarModalSaltar() {
-            document.getElementById('modal-saltar').style.display = 'none';
-        }
-
-        async function confirmarSalto(e) {
-            const motivo = document.getElementById('txt-motivo-salto').value;
-            if (!motivo.trim()) { alert("Describe el motivo."); return; }
-
-            const btn = document.getElementById('btn-confirm-skip');
-            const originalText = btn.innerText;
-            btn.innerText = "Enviando..."; btn.disabled = true;
-
-            try {
-                const res = await authFetch(`${API_URL}/rondas/saltar`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ motivo })
-                });
-                const data = await res.json();
-                cerrarModalSaltar();
-                procesarRespuestaRonda(res.ok, data);
-            } catch (err) {
-                alert("Error de conexión");
-            } finally {
-                btn.innerText = originalText; btn.disabled = false;
-            }
-        }
-
-        // --- UTILIDADES DE INTERFAZ ---
-
-        function procesarRespuestaRonda(exito, data) {
-            if (exito) {
-                const tipo = data.status === 'warning' ? 'warning' : 'success';
-                setStatus(tipo, data.message);
-                if (data.proximo_punto) {
-                    document.getElementById('objetivo').innerText = data.proximo_punto;
-                }
-            } else {
-                setStatus('error', data.message);
-            }
-        }
-
-        function setStatus(type, msg) {
-            const statusDiv = document.getElementById('status');
-            const icons = {
-                success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
-                warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-                error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-                loading: '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v4"/></svg>'
-            };
-
-            statusDiv.className = `log-box ${type}`;
-            statusDiv.innerHTML = `${icons[type]} <span>${msg}</span>`;
-        }
-    </script>
+function setStatus(type, msg) {
+    const statusDiv = document.getElementById('status');
+    const icons = {
+        success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+        warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+        error:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9"  y1="9" x2="15" y2="15"/></svg>',
+        loading: '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v4"/></svg>'
+    };
+    statusDiv.className = `log-box ${type}`;
+    statusDiv.innerHTML = `${icons[type] || icons.success} <span id="status-msg">${msg}</span>`;
+}
+</script>
 </body>
 </html>
